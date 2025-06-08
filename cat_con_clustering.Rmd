@@ -1,0 +1,188 @@
+---
+title: "bi-clustering"
+output: pdf_document
+date: "2025-03-07"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(cluster)
+library(MASS)
+library(arules)
+library(aricode)
+library(knitr)
+library(kmed)
+library(lsa)
+library(nomclust)
+library(UBL)
+library(stats)
+library(datasets)
+library(manydist)
+library(R6)
+library(FactoMineR)
+library(MixSim)
+library(Rtsne)
+library(ggplot2)
+```
+
+```{r import functions}
+source('../../Simulation Study/classes.R')
+source('../../Simulation Study/sim_study_funcs.R')
+```
+
+```{r customer segmentation data preprocess, echo=T, results='hide'}
+cust_data <- read.csv('../data/customer_segmentation.csv', sep=",")
+cust_data <- na.omit(cust_data)
+
+cust_data <- cust_data[-c(which(cust_data$Ever_Married == "")),]
+cust_data <- cust_data[-c(which(cust_data$Graduated == "")),]
+cust_data <- cust_data[-c(which(cust_data$Profession == "")),]
+cust_data <- cust_data[-c(which(cust_data$Var_1 == "")),]
+
+rand_cust = sample(nrow(cust_data), nrow(cust_data))
+cust_df <- cust_data[,-c(1,11)][rand_cust,]
+cust_clus <- cust_data[,11][rand_cust]
+
+cust_clus <- cust_clus[!duplicated(cust_df)]
+cust_df <- cust_df[!duplicated(cust_df),]
+
+for (x in c(1:2,4:5,7,9)) {
+   cust_df[,x] <- factor(cust_df[,x])
+}
+
+cust_df_con <- cust_df[,-c(1:2, 4:5, 7, 9)]
+cust_df_cat <- cust_df[,c(1:2, 4:5, 7, 9)]
+
+cust_num_df = cust_df
+for (x in c(1:ncol(cust_num_df))){
+  cust_num_df[,x] <- as.numeric(cust_num_df[,x])
+}
+```
+
+```{r Gap statistic}
+#gapcon = clusGap(cust_df_con, kmeans, K.max=8, B=50)
+#gapcat = clusGap(cust_num_df[,c(1:2, 4:5, 7, 9)], pam, K.max=8, B=50)
+```
+```{r gap statistic on continuous attributes}
+#print(maxSE(gapcon$Tab[, "gap"], gapcon$Tab[, "SE.sim"], method = "firstSEmax"))
+#print(maxSE(gapcon$Tab[, "gap"], gapcon$Tab[, "SE.sim"], method = "Tibs2001SEmax"))
+#print(maxSE(gapcon$Tab[, "gap"], gapcon$Tab[, "SE.sim"], method = "globalSEmax"))
+#print(maxSE(gapcon$Tab[, "gap"], gapcon$Tab[, "SE.sim"], method = "firstmax"))
+#print(maxSE(gapcon$Tab[, "gap"], gapcon$Tab[, "SE.sim"], method = "globalmax"))
+```
+
+```{r gap statistic on categorical attributes}
+#print(maxSE(gapcat$Tab[, "gap"], gapcat$Tab[, "SE.sim"], method = "firstSEmax"))
+#print(maxSE(gapcat$Tab[, "gap"], gapcat$Tab[, "SE.sim"], method = "Tibs2001SEmax"))
+#print(maxSE(gapcat$Tab[, "gap"], gapcat$Tab[, "SE.sim"], method = "globalSEmax"))
+#print(maxSE(gapcat$Tab[, "gap"], gapcat$Tab[, "SE.sim"], method = "firstmax"))
+#print(maxSE(gapcat$Tab[, "gap"], gapcat$Tab[, "SE.sim"], method = "globalmax"))
+```
+
+```{r}
+con_km = kmeans(cust_df_con, centers=8)
+
+cat_dist <- daisy(cust_df_cat, metric='gower', type=list(asymm=c(1:3)))
+cat_pam4 <- pam(cat_dist, k=4, diss=TRUE)
+```
+### Visualisation of biclustering
+
+```{r gower on data, echo=T, results='hide'}
+gower_dist_cust <- daisy(cust_df, metric="gower", 
+                          type=list(asymm=c(1:2,4), factor=c(5,7,9)))
+gower_mds_cust <- isoMDS(gower_dist_cust)$points
+tsne_res <- Rtsne(gower_dist_cust, is_distance = TRUE)
+```
+
+
+```{r TSNE cust data biclustering, fig.dim = c(8, 5)}
+tsne_4 <- data.frame(X1 = tsne_res$Y[,1], 
+                        X2 = tsne_res$Y[,2], 
+                        Label_con = as.factor(con_km$cluster),
+                        Label_cat = as.factor(cat_pam4$clustering))
+names(tsne_4) <- c("Dim1", "Dim2", "Con", "Cat")
+
+plot_TSNE4_both <- ggplot(aes(x = Dim1, y = Dim2, color = Con, shape=Cat), data = tsne_4) +
+  geom_point() +
+  labs(title = "T-SNE Projection: Customer Segmentation Data", x = "Dim 1", y = "Dim 2") +
+  scale_color_brewer(palette = "Paired") + 
+  geom_point(size=0.1) + 
+  theme(axis.title.x=element_blank(), axis.title.y=element_blank())
+#ggsave('biclus_cust_TSNE4_both.png', plot_TSNE4_both, width = 6, height = 6)
+print(plot_TSNE4_both)
+```
+
+```{r Gower + MDS cust data biclustering, fig.dim = c(8, 5)}
+
+
+# Repeat with other labels
+mds_4 <- data.frame(X1 = gower_mds_cust[,1], 
+                     X2 = gower_mds_cust[,2], 
+                        Label_con = as.factor(con_km$cluster),
+                        Label_cat = as.factor(cat_pam4$clustering))
+names(mds_4) <- c("Dim1", "Dim2", "Con", "Cat")
+
+# Plot and save
+plot_mds4_both <- ggplot(mds_4, aes(x = Dim1, y = Dim2,color = Con, shape=Cat)) + 
+          geom_point() +
+          labs(title='Gower MDS: Customer Segmentation Data', x = "Dim 1", y = "Dim 2") +
+          scale_color_brewer(palette = "Paired") + 
+          geom_point(size=0.1) + 
+          theme(axis.title.x=element_blank(), axis.title.y=element_blank())
+#ggsave('biclus_cust_mds4_both.png', plot_mds4_both, width = 6, height = 6)
+print(plot_mds4_both)
+```
+
+
+
+```{r TSNE cust data biclustering, fig.dim = c(8, 5)}
+tsne_4 <- data.frame(X1 = tsne_res$Y[,1], 
+                        X2 = tsne_res$Y[,2], 
+                        Label_con = as.factor(con_km$cluster),
+                        Label_cat = as.factor(cat_pam4$clustering))
+names(tsne_4) <- c("Dim1", "Dim2", "Con", "Cat")
+
+plot_TSNE4_cat <- ggplot(aes(x = Dim1, y = Dim2, color = Cat), data = tsne_4) +
+  geom_point() +
+  labs(title = "T-SNE Projection: Customer Segmentation Data", x = "Dim 1", y = "Dim 2") +
+  scale_color_brewer(palette = "Paired") + 
+  geom_point(size=0.1) + 
+  theme(axis.title.x=element_blank(), axis.title.y=element_blank())
+#ggsave('biclus_cust_TSNE4_cat.png', plot_TSNE4_cat, width = 6, height = 6)
+print(plot_TSNE4_cat)
+```
+```{r Gower + MDS cust data biclustering, fig.dim = c(8, 5)}
+# Repeat with other labels
+mds_4 <- data.frame(X1 = gower_mds_cust[,1], 
+                     X2 = gower_mds_cust[,2], 
+                        Label_con = as.factor(con_km$cluster),
+                        Label_cat = as.factor(cat_pam4$clustering))
+names(mds_4) <- c("Dim1", "Dim2", "Con", "Cat")
+
+# Plot and save
+plot_mds4_cat <- ggplot(mds_4, aes(x = Dim1, y = Dim2,color = Cat)) + 
+          geom_point() +
+          labs(title='Gower MDS: Customer Segmentation Data', x = "Dim 1", y = "Dim 2") +
+          scale_color_brewer(palette = "Paired") + 
+          geom_point(size=0.1) + 
+          theme(axis.title.x=element_blank(), axis.title.y=element_blank())
+#ggsave('biclus_cust_mds4_cat.png', plot_mds4_cat)
+print(plot_mds4_cat)
+```
+
+```{r clustering stats}
+ARI(cust_clus, as.factor(cat_pam4$clustering))
+AMI(cust_clus, as.factor(cat_pam4$clustering))
+mean(silhouette(cat_pam4$clustering, dist(tsne_res$Y))[,3])
+mean(silhouette(cat_pam4$clustering, dist(gower_mds_cust))[,3])
+
+ARI(cust_clus, as.factor(con_km$cluster))
+AMI(cust_clus, as.factor(con_km$cluster))
+mean(silhouette(con_km$cluster, dist(tsne_res$Y))[,3])
+mean(silhouette(con_km$cluster, dist(gower_mds_cust))[,3])
+
+
+#dist(tsne_res$Y)
+```
+
+

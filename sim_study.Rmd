@@ -1,0 +1,44 @@
+---
+title: "sim_study"
+output: html_document
+date: "2025-01-31"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r import functions, warning=FALSE}
+source('classes.R')
+source('sim_study_funcs.R')
+```
+
+```{r iterate over cat_ratio, warning=FALSE}
+cat_ratio_scores = study(char='cat_ratio', c(1:9) * 0.1, nreps=100)
+saveRDS(cat_ratio_scores, "cat_ratio_scores.rds")
+```
+
+```{r iterate over clusters, warning=FALSE}
+clusters_scores = study(char='clusters', c(1:5) * 2, nreps=100)
+saveRDS(clusters_scores, "clusters_scores.rds")
+```
+
+```{r iterate over overlap, warning=FALSE}
+overlap_scores = study(char='overlap', c(1:5) * 0.02, nreps=100)
+saveRDS(overlap_scores, "overlap_scores.rds")
+```
+
+```{r iterate over rows, warning=FALSE}
+rows_scores = study(char='rows', c(50, 100, 200, 400, 600, 800), nreps=100)
+saveRDS(rows_scores, "rows_scores.rds")
+```
+
+```{r iterate over columns, warning=FALSE}
+columns_scores = study(char='columns', c(1:6) * 5, nreps=100)
+saveRDS(columns_scores, "columns_scores.rds")
+```
+
+```{r iterate over pi_val, warning=FALSE}
+pi_val_scores = study(char='pi_val', c(1:5) * 0.2, nreps=100)
+saveRDS(pi_val_scores, "pi_val_scores.rds")
+```

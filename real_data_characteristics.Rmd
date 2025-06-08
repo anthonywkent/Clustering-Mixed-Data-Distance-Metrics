@@ -1,0 +1,208 @@
+---
+title: "real_data_characteristics"
+output: pdf_document
+date: "2025-02-06"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(mclust)
+library(knitr)
+```
+
+This script outlines the characteristics present in the real datasets that were used in the exploration chapter. We consider these characteristics to motivate some of the choices of parameter values in the later simulation study. The data used in the exploration chapter are: the `mtcars` dataset from the  built in R package `datasets`, the 'Cleveland Heart Disease', and 'Banking-Marketing' datasets from the online guide to clustering mixed data by Eoghan Keany, and the 'Customer Segmentation' dataset from the same github repository, then also the 'Breast Cancer' and 'Phone Price' datasets fround on kaggle.
+
+The characteristics that will be changed in the simulation study are: 
+- `cat_ratio` representing the percentage of categorical variables
+- `clusters` representing the number of clusters
+- `overlap` representing the percentage overlap between clusters
+- `rows` representing the number of data points in each dataset
+- `columns` representing the number of attributes in each dataset
+- `pi_val` representing the smallest mixing proportion
+
+```{r names and initialsing, echo=FALSE}
+row_names = c('Cars', 'Heart', 'Banking', 'Customer', 'Breast', 'Phone')
+col_names = c('cat_ratio', 'clusters', 'overlap', 'rows', 'columns', 'pi_val')
+characteristics = matrix(data = NA, nrow = 6, ncol = 6, byrow = FALSE, dimnames = list(row_names, col_names))
+```
+
+
+```{r mtcars, echo=FALSE}
+cars_df <- mtcars[,-9]
+cars_clus <- mtcars[,9]
+# make categorical columns factors instead of numeric
+for (x in 8) {
+   cars_df[,x] <- factor(cars_df[,x])
+}
+
+cars_df[,c(1,3:7)] <- scale(cars_df[,c(1,3:7)])
+
+cars_num_df = cars_df
+for (x in c(1:ncol(cars_num_df))){
+  cars_num_df[,x] <- as.numeric(cars_num_df[,x])
+}
+
+dims_cars = dim(cars_df)
+num_cat_cars = sum(sapply(cars_df, is.factor))
+cat_ratio_cars = num_cat_cars / dims_cars[2]
+clusters_cars = length(unique(cars_clus))
+pi_val_cars = round(min(as.numeric(prop.table(table(cars_clus)))),2)
+
+gmm_cars <- Mclust(cars_df, G=clusters_cars)
+prob_matrix_cars <- gmm_cars$z
+overlap_cars <- round(sum(rowSums(prob_matrix_cars > 0.2) > 1)/ nrow(cars_df), 3)
+
+# c(cat_ratio, clusters, overlap, rows, columns, pi_val)
+cars_char = c(cat_ratio_cars, clusters_cars, overlap_cars, dims_cars[1], dims_cars[2], pi_val_cars)
+characteristics[1,] = cars_char
+```
+
+```{r cleveland heart data, echo=FALSE}
+heart_data <- read.csv('data/heart.csv')
+heart_df <- heart_data[,-14]
+heart_clus <- heart_data[,14]
+for (x in c(2:3,6:7,9,11:13)) {
+   heart_df[,x] <- factor(heart_df[,x])
+}
+
+dims_heart = dim(heart_df)
+num_cat_heart = sum(sapply(heart_df, is.factor))
+cat_ratio_heart = num_cat_heart / dims_heart[2]
+clusters_heart = length(unique(heart_clus))
+pi_val_heart = round(min(as.numeric(prop.table(table(heart_clus)))),2)
+
+gmm_heart <- Mclust(heart_df, G=clusters_heart)
+prob_matrix_heart <- gmm_heart$z
+overlap_heart <- round(sum(rowSums(prob_matrix_heart > 0.2) > 1)/ nrow(heart_df), 3)
+
+# c(cat_ratio, clusters, overlap, rows, columns, pi_val)
+heart_char = c(cat_ratio_heart, clusters_heart, overlap_heart, dims_heart[1], dims_heart[2], pi_val_heart)
+characteristics[2,] = heart_char
+```
+
+```{r banking data, echo=FALSE}
+bank_data <- read.csv('data/banking.csv', sep=";")
+rand_bank = sample(nrow(bank_data), nrow(bank_data))
+bank_df <- bank_data[,-17][rand_bank,]
+bank_clus <- bank_data[,17][rand_bank]
+
+for (x in c(2:5, 7:11,16)) {
+   bank_df[,x] <- factor(bank_df[,x])
+}
+
+bank_num_df = bank_df
+for (x in c(1:ncol(bank_num_df))){
+  bank_num_df[,x] <- as.numeric(bank_num_df[,x])
+}
+
+dims_bank = dim(bank_df)
+num_cat_bank = sum(sapply(bank_df, is.factor))
+cat_ratio_bank = num_cat_bank / dims_bank[2]
+clusters_bank = length(unique(bank_clus))
+pi_val_bank = round(min(as.numeric(prop.table(table(bank_clus)))),2)
+
+gmm_bank <- Mclust(bank_df, G=clusters_bank)
+prob_matrix_bank <- gmm_bank$z
+overlap_bank <- round(sum(rowSums(prob_matrix_bank > 0.2) > 1)/ nrow(bank_df), 3)
+
+# c(cat_ratio, clusters, overlap, rows, columns, pi_val)
+bank_char = c(cat_ratio_bank, clusters_bank, overlap_bank, dims_bank[1], dims_bank[2], pi_val_bank)
+characteristics[3,] = bank_char
+```
+
+```{r customer segmentation data, echo=FALSE}
+cust_data <- read.csv('data/customer_segmentation.csv', sep=",")
+cust_data <- na.omit(cust_data)
+
+cust_data <- cust_data[-c(which(cust_data$Ever_Married == "")),]
+cust_data <- cust_data[-c(which(cust_data$Graduated == "")),]
+cust_data <- cust_data[-c(which(cust_data$Profession == "")),]
+cust_data <- cust_data[-c(which(cust_data$Var_1 == "")),]
+
+rand_cust = sample(nrow(cust_data), nrow(cust_data))
+cust_df <- cust_data[,-c(1,11)][rand_cust,]
+cust_clus <- cust_data[,11][rand_cust]
+
+for (x in c(1:2,4:5,7,9)) {
+   cust_df[,x] <- factor(cust_df[,x])
+}
+
+cust_num_df = cust_df
+for (x in c(1:ncol(cust_num_df))){
+  cust_num_df[,x] <- as.numeric(cust_num_df[,x])
+}
+
+dims_cust = dim(cust_df)
+num_cat_cust = sum(sapply(cust_df, is.factor))
+cat_ratio_cust = num_cat_cust / dims_cust[2]
+clusters_cust = length(unique(cust_clus))
+pi_val_cust = round(min(as.numeric(prop.table(table(cust_clus)))),2)
+
+gmm_cust <- Mclust(cust_df, G=clusters_cust)
+prob_matrix_cust <- gmm_cust$z
+overlap_cust <- round(sum(rowSums(prob_matrix_cust > 0.2) > 1)/ nrow(cust_df), 3)
+
+# c(cat_ratio, clusters, overlap, rows, columns, pi_val)
+cust_char = c(cat_ratio_cust, clusters_cust, overlap_cust, dims_cust[1], dims_cust[2], pi_val_cust)
+characteristics[4,] = cust_char
+```
+
+```{r breast cancer data, echo=FALSE}
+breast_data <- read.csv('data/breast-cancer.csv')
+breast_df <- breast_data[,-c(1:2)]
+breast_clus <- breast_data[,2]
+
+dims_breast = dim(breast_df)
+num_cat_breast = sum(sapply(breast_df, is.factor))
+cat_ratio_breast = num_cat_breast / dims_breast[2]
+clusters_breast = length(unique(breast_clus))
+pi_val_breast = round(min(as.numeric(prop.table(table(breast_clus)))),2)
+
+gmm_breast <- Mclust(breast_df, G=clusters_breast)
+prob_matrix_breast <- gmm_breast$z
+overlap_breast <- round(sum(rowSums(prob_matrix_breast > 0.2) > 1)/ nrow(breast_df), 3)
+
+# c(cat_ratio, clusters, overlap, rows, columns, pi_val)
+breast_char = c(cat_ratio_breast, clusters_breast, overlap_breast, dims_breast[1], dims_breast[2], pi_val_breast)
+characteristics[5,] = breast_char
+```
+
+```{r phone price data, echo=FALSE}
+phone_data <- read.csv('data/mobile_price.csv') 
+rand_phone = sample(nrow(phone_data), nrow(phone_data)%/%10)
+phone_df <- phone_data[,-21][rand_phone,]
+phone_clus <- phone_data[,21][rand_phone]
+
+
+for (x in c(2,4,6,18:20)) {
+   phone_df[,x] <- factor(phone_df[,x])
+}
+
+phone_num_df = phone_df
+for (x in c(1:ncol(phone_num_df))){
+  phone_num_df[,x] <- as.numeric(phone_num_df[,x])
+}
+
+dims_phone = dim(phone_df)
+num_cat_phone = sum(sapply(phone_df, is.factor))
+cat_ratio_phone = num_cat_phone / dims_phone[2]
+clusters_phone = length(unique(phone_clus))
+pi_val_phone = round(min(as.numeric(prop.table(table(phone_clus)))),2)
+
+gmm_phone <- Mclust(phone_df, G=clusters_phone)
+prob_matrix_phone <- gmm_phone$z
+overlap_phone <- round(sum(rowSums(prob_matrix_phone > 0.2) > 1)/ nrow(phone_df), 3)
+
+# c(cat_ratio, clusters, overlap, rows, columns, pi_val)
+phone_char = c(cat_ratio_phone, clusters_phone, overlap_phone, dims_phone[1], dims_phone[2], pi_val_phone)
+characteristics[6,] = phone_char
+```
+```{r saving characteristics, echo=FALSE}
+saveRDS(characteristics, "real_data_characteristics.rds")
+```
+
+
+```{r Visualise}
+kable(data.frame(characteristics), caption = "Real Data Characteristics")
+```
+

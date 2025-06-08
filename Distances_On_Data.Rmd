@@ -1,0 +1,1126 @@
+---
+title: "Distances_On_Data_05_01_25"
+output: pdf_document
+date: "2025-01-05"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(cluster)
+library(MASS)
+library(arules)
+library(aricode)
+library(knitr)
+library(kmed)
+library(lsa)
+library(nomclust)
+library(UBL)
+library(stats)
+library(datasets)
+library(manydist)
+library(R6)
+library(FactoMineR)
+set.seed(2025)
+```
+
+## mtcars data
+- 7 numerical variables
+- 3 categorical variables
+- 2 clusters (0:automatic, 1:manual)
+
+```{r mtcars preprocess}
+cars_df <- mtcars[,-9]
+cars_clus <- mtcars[,9]
+# make categorical columns factors instead of numeric
+for (x in 8) {
+   cars_df[,x] <- factor(cars_df[,x])
+}
+
+cars_df[,c(1,3:7)] <- scale(cars_df[,c(1,3:7)])
+
+cars_num_df = cars_df
+for (x in c(1:ncol(cars_num_df))){
+  cars_num_df[,x] <- as.numeric(cars_num_df[,x])
+}
+```
+
+```{r mtcars cluster, echo=FALSE}
+ubdep_dist_cars <- mdist(cars_df)
+eucl_dist_cars <- dist(cars_num_df, method="euclidean")
+gower_dist_cars <- daisy(cars_df, metric="gower", type=list(asymm=8))
+cos_dist_cars <- 1 - cosine(t(cars_num_df))
+HVDM_dist_cars <- distances(1, cars_df, 'HVDM')
+#ahm_dist_cars <- distmix(cars_df, method = 'ahmad', 
+#                         idnum=c(1:7, 9:10), idbin=c(8))
+
+ubdep_pam_cars <- pam(ubdep_dist_cars, 2, diss=TRUE)
+eucl_pam_cars <- pam(eucl_dist_cars, 2, diss=TRUE)
+gower_pam_cars <- pam(gower_dist_cars, 2, diss=TRUE)
+cos_pam_cars <- pam(cos_dist_cars, 2, diss=TRUE)
+HVDM_pam_cars <- pam(HVDM_dist_cars, 2, diss=TRUE)
+#ahm_pam_cars <- pam(ahm_dist_cars, 2, diss=TRUE)
+
+ubdep_clus_pam_cars <- ubdep_pam_cars$clustering
+eucl_clus_pam_cars <- eucl_pam_cars$clustering
+gower_clus_pam_cars <- gower_pam_cars$clustering
+cos_clus_pam_cars <- cos_pam_cars$clustering
+HVDM_clus_pam_cars <- HVDM_pam_cars$clustering
+#ahm_clus_pam_cars <- ahm_pam_cars$clustering
+
+ubdep_ari_pam_cars <- ARI(cars_clus, ubdep_clus_pam_cars)
+eucl_ari_pam_cars <- ARI(cars_clus, eucl_clus_pam_cars)
+gower_ari_pam_cars <- ARI(cars_clus, gower_clus_pam_cars)
+cos_ari_pam_cars <- ARI(cars_clus, cos_clus_pam_cars)
+HVDM_ari_pam_cars <- ARI(cars_clus, HVDM_clus_pam_cars)
+#ahm_ari_pam_cars <- ARI(cars_clus, ahm_clus_pam_cars)
+
+ubdep_ami_pam_cars <- AMI(cars_clus, ubdep_clus_pam_cars)
+eucl_ami_pam_cars <- AMI(cars_clus, eucl_clus_pam_cars)
+gower_ami_pam_cars <- AMI(cars_clus, gower_clus_pam_cars)
+cos_ami_pam_cars <- AMI(cars_clus, cos_clus_pam_cars)
+HVDM_ami_pam_cars <- AMI(cars_clus, HVDM_clus_pam_cars)
+#ahm_ami_pam_cars <- AMI(cars_clus, ahm_clus_pam_cars)
+
+ubdep_sil_pam_cars <- silhouette(ubdep_clus_pam_cars, ubdep_dist_cars)
+eucl_sil_pam_cars <- silhouette(eucl_clus_pam_cars, eucl_dist_cars)
+gower_sil_pam_cars <- silhouette(gower_clus_pam_cars, gower_dist_cars)
+cos_sil_pam_cars <- silhouette(cos_clus_pam_cars, cos_dist_cars)
+HVDM_sil_pam_cars <- silhouette(HVDM_clus_pam_cars, HVDM_dist_cars)
+#ahm_sil_pam_cars <- silhouette(ahm_clus_pam_cars, ahm_dist_cars)
+
+ubdep_sil_avg_pam_cars <- mean(ubdep_sil_pam_cars[,3])
+eucl_sil_avg_pam_cars <- mean(eucl_sil_pam_cars[,3])
+gower_sil_avg_pam_cars <- mean(gower_sil_pam_cars[,3])
+cos_sil_avg_pam_cars <- mean(cos_sil_pam_cars[,3])
+HVDM_sil_avg_pam_cars <- mean(HVDM_sil_pam_cars[,3])
+#ahm_sil_avg_pam_cars <- mean(ahm_sil_pam_cars[,3])
+```
+
+```{r mtcars clustering stats}
+dist_names_cars <- c('Unbiased Dependant', 'Euclidean', 'Gower', 'Cosine', 'HVDM')
+cars_ari_pam <- c(ubdep_ari_pam_cars, eucl_ari_pam_cars, gower_ari_pam_cars, cos_ari_pam_cars, HVDM_ari_pam_cars)
+cars_ami_pam <- c(ubdep_ami_pam_cars, eucl_ami_pam_cars, gower_ami_pam_cars, cos_ami_pam_cars, HVDM_ami_pam_cars)
+cars_avg_sil_pam <- c(ubdep_sil_avg_pam_cars, eucl_sil_avg_pam_cars, gower_sil_avg_pam_cars, cos_sil_avg_pam_cars, HVDM_sil_avg_pam_cars)
+
+scores_pam_cars <- data.frame(cars_ari_pam, cars_ami_pam, cars_avg_sil_pam, row.names = dist_names_cars)
+colnames(scores_pam_cars) <- c('ARI', 'AMI', 'Average Silhouette Score')
+kable(scores_pam_cars, caption = "Statistics on mtcars Data with pam")
+```
+
+
+## cleveland heart data
+- 5 numerical variables
+- 8 categorical variables
+- 2 clusters (0,1)
+
+```{r cleveland heart data preprocess}
+heart_data <- read.csv('data/heart.csv')
+heart_df <- heart_data[,-14]
+heart_clus <- heart_data[,14]
+for (x in c(2:3,6:7,9,11:13)) {
+   heart_df[,x] <- factor(heart_df[,x])
+}
+```
+
+```{r cleveland heart data cluster, echo=FALSE}
+ubdep_dist_heart <- mdist(heart_df)
+eucl_dist_heart <- dist(heart_df, method="euclidean")
+gower_dist_heart <- daisy(heart_df, metric="gower", 
+                          type=list(asymm=c(2,6,9), factor=c(3,7,11:13)))
+cos_dist_heart <- 1 - cosine(t(heart_data[,-14]))
+HVDM_dist_heart <- distances(1, heart_df, 'HVDM')
+ahm_dist_heart <- distmix(heart_df, method = 'ahmad', 
+                         idnum=c(1, 4:5, 8,10), idbin=c(2,6,9), idcat=c(3,7,11:13))
+
+
+ubdep_pam_heart <- pam(ubdep_dist_heart, 2, diss=TRUE)
+eucl_pam_heart <- pam(eucl_dist_heart, 2, diss=TRUE)
+gower_pam_heart <- pam(gower_dist_heart, 2, diss=TRUE)
+cos_pam_heart <- pam(cos_dist_heart, 2, diss=TRUE)
+HVDM_pam_heart <- pam(HVDM_dist_heart, 2, diss=TRUE)
+ahm_pam_heart <- pam(ahm_dist_heart, 2, diss=TRUE)
+
+ubdep_clus_pam_heart <- ubdep_pam_heart$clustering
+eucl_clus_pam_heart <- eucl_pam_heart$clustering
+gower_clus_pam_heart <- gower_pam_heart$clustering
+cos_clus_pam_heart <- cos_pam_heart$clustering
+HVDM_clus_pam_heart <- HVDM_pam_heart$clustering
+ahm_clus_pam_heart <- ahm_pam_heart$clustering
+
+ubdep_ari_pam_heart <- ARI(heart_clus, ubdep_clus_pam_heart)
+eucl_ari_pam_heart <- ARI(heart_clus, eucl_clus_pam_heart)
+gower_ari_pam_heart <- ARI(heart_clus, gower_clus_pam_heart)
+cos_ari_pam_heart <- ARI(heart_clus, cos_clus_pam_heart)
+HVDM_ari_pam_heart <- ARI(heart_clus, HVDM_clus_pam_heart)
+ahm_ari_pam_heart <- ARI(heart_clus, ahm_clus_pam_heart)
+
+ubdep_ami_pam_heart <- AMI(heart_clus, ubdep_clus_pam_heart)
+eucl_ami_pam_heart <- AMI(heart_clus, eucl_clus_pam_heart)
+gower_ami_pam_heart <- AMI(heart_clus, gower_clus_pam_heart)
+cos_ami_pam_heart <- AMI(heart_clus, cos_clus_pam_heart)
+HVDM_ami_pam_heart <- AMI(heart_clus, HVDM_clus_pam_heart)
+ahm_ami_pam_heart <- AMI(heart_clus, ahm_clus_pam_heart)
+
+ubdep_sil_pam_heart <- silhouette(ubdep_clus_pam_heart, ubdep_dist_heart)
+eucl_sil_pam_heart <- silhouette(eucl_clus_pam_heart, eucl_dist_heart)
+gower_sil_pam_heart <- silhouette(gower_clus_pam_heart, gower_dist_heart)
+cos_sil_pam_heart <- silhouette(cos_clus_pam_heart, cos_dist_heart)
+HVDM_sil_pam_heart <- silhouette(HVDM_clus_pam_heart, HVDM_dist_heart)
+ahm_sil_pam_heart <- silhouette(ahm_clus_pam_heart, ahm_dist_heart)
+
+ubdep_sil_avg_pam_heart <- mean(ubdep_sil_pam_heart[,3])
+eucl_sil_avg_pam_heart <- mean(eucl_sil_pam_heart[,3])
+gower_sil_avg_pam_heart <- mean(gower_sil_pam_heart[,3])
+cos_sil_avg_pam_heart <- mean(cos_sil_pam_heart[,3])
+HVDM_sil_avg_pam_heart <- mean(HVDM_sil_pam_heart[,3])
+ahm_sil_avg_pam_heart <- mean(ahm_sil_pam_heart[,3])
+
+```
+
+
+```{r cleveland heart data clustering stats}
+dist_names_heart <- c('Unbiased Dependant', 'Euclidean', 'Gower', 'Cosine', 'HVDM', 'Ahmad & Dey')
+heart_ari_pam <- c(ubdep_ari_pam_heart, eucl_ari_pam_heart, gower_ari_pam_heart, cos_ari_pam_heart, HVDM_ari_pam_heart, ahm_ari_pam_heart)
+heart_ami_pam <- c(ubdep_ami_pam_heart, eucl_ami_pam_heart, gower_ami_pam_heart, cos_ami_pam_heart, HVDM_ami_pam_heart, ahm_ami_pam_heart)
+heart_avg_sil_pam <- c(ubdep_sil_avg_pam_heart, eucl_sil_avg_pam_heart, gower_sil_avg_pam_heart, cos_sil_avg_pam_heart, HVDM_sil_avg_pam_heart, ahm_sil_avg_pam_heart)
+
+scores_pam_heart <- data.frame(heart_ari_pam, heart_ami_pam, heart_avg_sil_pam, row.names = dist_names_heart)
+colnames(scores_pam_heart) <- c('ARI', 'AMI', 'Average Silhouette Score')
+kable(scores_pam_heart, caption = "Statistics on Cleveland Heart Data with pam")
+```
+
+
+## banking data
+- 6 numerical variables
+- 10 categorical variables
+- 2 clusters ('yes', 'no')
+
+```{r banking data preprocess}
+set.seed(2025)
+bank_data <- read.csv('data/banking.csv', sep=";")
+rand_bank = sample(nrow(bank_data), nrow(bank_data)%/%100)
+bank_df <- bank_data[,-17][rand_bank,]
+bank_clus <- bank_data[,17][rand_bank]
+
+for (x in c(2:5, 7:11,16)) {
+   bank_df[,x] <- factor(bank_df[,x])
+}
+
+bank_num_df = bank_df
+for (x in c(1:ncol(bank_num_df))){
+  bank_num_df[,x] <- as.numeric(bank_num_df[,x])
+}
+```
+
+```{r banking data cluster, echo=FALSE}
+ubdep_dist_bank <- mdist(bank_df)
+eucl_dist_bank <- dist(bank_num_df, method="euclidean")
+gower_dist_bank <- daisy(bank_df, metric="gower", 
+                          type=list(asymm=c(5,7:8), factor=c(2:4,9:11,16)))
+cos_dist_bank <- 1 - cosine(t(bank_num_df[,-14]))
+HVDM_dist_bank <- distances(1, bank_df, 'HVDM')
+ahm_dist_bank <- distmix(bank_df, method = 'ahmad', 
+                         idnum=c(1,6,12:15), idbin=c(5,7:8), idcat=c(2:4,9:11,16))
+
+
+ubdep_pam_bank <- pam(ubdep_dist_bank, 2, diss=TRUE)
+eucl_pam_bank <- pam(eucl_dist_bank, 2, diss=TRUE)
+gower_pam_bank <- pam(gower_dist_bank, 2, diss=TRUE)
+cos_pam_bank <- pam(cos_dist_bank, 2, diss=TRUE)
+HVDM_pam_bank <- pam(HVDM_dist_bank, 2, diss=TRUE)
+ahm_pam_bank <- pam(ahm_dist_bank, 2, diss=TRUE)
+
+ubdep_clus_pam_bank <- ubdep_pam_bank$clustering
+eucl_clus_pam_bank <- eucl_pam_bank$clustering
+gower_clus_pam_bank <- gower_pam_bank$clustering
+cos_clus_pam_bank <- cos_pam_bank$clustering
+HVDM_clus_pam_bank <- HVDM_pam_bank$clustering
+ahm_clus_pam_bank <- ahm_pam_bank$clustering
+
+ubdep_ari_pam_bank <- ARI(bank_clus, ubdep_clus_pam_bank)
+eucl_ari_pam_bank <- ARI(bank_clus, eucl_clus_pam_bank)
+gower_ari_pam_bank <- ARI(bank_clus, gower_clus_pam_bank)
+cos_ari_pam_bank <- ARI(bank_clus, cos_clus_pam_bank)
+HVDM_ari_pam_bank <- ARI(bank_clus, HVDM_clus_pam_bank)
+ahm_ari_pam_bank <- ARI(bank_clus, ahm_clus_pam_bank)
+
+ubdep_ami_pam_bank <- AMI(bank_clus, ubdep_clus_pam_bank)
+eucl_ami_pam_bank <- AMI(bank_clus, eucl_clus_pam_bank)
+gower_ami_pam_bank <- AMI(bank_clus, gower_clus_pam_bank)
+cos_ami_pam_bank <- AMI(bank_clus, cos_clus_pam_bank)
+HVDM_ami_pam_bank <- AMI(bank_clus, HVDM_clus_pam_bank)
+ahm_ami_pam_bank <- AMI(bank_clus, ahm_clus_pam_bank)
+
+ubdep_sil_pam_bank <- silhouette(ubdep_clus_pam_bank, ubdep_dist_bank)
+eucl_sil_pam_bank <- silhouette(eucl_clus_pam_bank, eucl_dist_bank)
+gower_sil_pam_bank <- silhouette(gower_clus_pam_bank, gower_dist_bank)
+cos_sil_pam_bank <- silhouette(cos_clus_pam_bank, cos_dist_bank)
+HVDM_sil_pam_bank <- silhouette(HVDM_clus_pam_bank, HVDM_dist_bank)
+ahm_sil_pam_bank <- silhouette(ahm_clus_pam_bank, ahm_dist_bank)
+
+ubdep_sil_avg_pam_bank <- mean(ubdep_sil_pam_bank[,3])
+eucl_sil_avg_pam_bank <- mean(eucl_sil_pam_bank[,3])
+gower_sil_avg_pam_bank <- mean(gower_sil_pam_bank[,3])
+cos_sil_avg_pam_bank <- mean(cos_sil_pam_bank[,3])
+HVDM_sil_avg_pam_bank <- mean(HVDM_sil_pam_bank[,3])
+ahm_sil_avg_pam_bank <- mean(ahm_sil_pam_bank[,3])
+
+```
+
+```{r banking data clustering stats}
+dist_names_bank <- c('Unbiased Dependant', 'Euclidean', 'Gower', 'Cosine', 'HVDM', 'Ahmad & Dey')
+bank_ari_pam <- c(ubdep_ari_pam_bank, eucl_ari_pam_bank, gower_ari_pam_bank, cos_ari_pam_bank, HVDM_ari_pam_bank, ahm_ari_pam_bank)
+bank_ami_pam <- c(ubdep_ami_pam_bank, eucl_ami_pam_bank, gower_ami_pam_bank, cos_ami_pam_bank, HVDM_ami_pam_bank, ahm_ami_pam_bank)
+bank_avg_sil_pam <- c(ubdep_sil_avg_pam_bank, eucl_sil_avg_pam_bank, gower_sil_avg_pam_bank, cos_sil_avg_pam_bank, HVDM_sil_avg_pam_bank, ahm_sil_avg_pam_bank)
+
+scores_pam_bank <- data.frame(bank_ari_pam, bank_ami_pam, bank_avg_sil_pam, row.names = dist_names_bank)
+colnames(scores_pam_bank) <- c('ARI', 'AMI', 'Average Silhouette Score')
+kable(scores_pam_bank, caption = "Statistics on Banking Data")
+```
+
+
+## customer segmentation data
+- 3 numerical variables
+- 6 categorical variables
+- 4 clusters (A,B,C,D)
+
+```{r customer segmentation data preprocess}
+set.seed(2025)
+cust_data <- read.csv('data/customer_segmentation.csv', sep=",")
+cust_data <- na.omit(cust_data)
+
+cust_data <- cust_data[-c(which(cust_data$Ever_Married == "")),]
+cust_data <- cust_data[-c(which(cust_data$Graduated == "")),]
+cust_data <- cust_data[-c(which(cust_data$Profession == "")),]
+cust_data <- cust_data[-c(which(cust_data$Var_1 == "")),]
+
+rand_cust = sample(nrow(cust_data), nrow(cust_data)%/%20)
+cust_df <- cust_data[,-c(1,11)][rand_cust,]
+cust_clus <- cust_data[,11][rand_cust]
+
+for (x in c(1:2,4:5,7,9)) {
+   cust_df[,x] <- factor(cust_df[,x])
+}
+
+cust_num_df = cust_df
+for (x in c(1:ncol(cust_num_df))){
+  cust_num_df[,x] <- as.numeric(cust_num_df[,x])
+}
+```
+
+```{r customer segmentation data cluster, echo=FALSE}
+ubdep_dist_cust <- mdist(cust_df)
+eucl_dist_cust <- dist(cust_num_df, method="euclidean")
+gower_dist_cust <- daisy(cust_df, metric="gower", 
+                          type=list(asymm=c(1:2,4), factor=c(5,7,9)))
+cos_dist_cust <- 1 - cosine(t(cust_num_df))
+HVDM_dist_cust <- distances(1, cust_df, 'HVDM')
+ahm_dist_cust <- distmix(cust_df, method = 'ahmad', 
+                         idnum=c(3,6,8), idbin=c(1:2,4), idcat=c(5,7,9))
+
+
+ubdep_pam_cust <- pam(ubdep_dist_cust, 4, diss=TRUE)
+eucl_pam_cust <- pam(eucl_dist_cust, 4, diss=TRUE)
+gower_pam_cust <- pam(gower_dist_cust, 4, diss=TRUE)
+cos_pam_cust <- pam(cos_dist_cust, 4, diss=TRUE)
+HVDM_pam_cust <- pam(HVDM_dist_cust, 4, diss=TRUE)
+ahm_pam_cust <- pam(ahm_dist_cust, 4, diss=TRUE)
+
+ubdep_clus_pam_cust <- ubdep_pam_cust$clustering
+eucl_clus_pam_cust <- eucl_pam_cust$clustering
+gower_clus_pam_cust <- gower_pam_cust$clustering
+cos_clus_pam_cust <- cos_pam_cust$clustering
+HVDM_clus_pam_cust <- HVDM_pam_cust$clustering
+ahm_clus_pam_cust <- ahm_pam_cust$clustering
+
+ubdep_ari_pam_cust <- ARI(cust_clus, ubdep_clus_pam_cust)
+eucl_ari_pam_cust <- ARI(cust_clus, eucl_clus_pam_cust)
+gower_ari_pam_cust <- ARI(cust_clus, gower_clus_pam_cust)
+cos_ari_pam_cust <- ARI(cust_clus, cos_clus_pam_cust)
+HVDM_ari_pam_cust <- ARI(cust_clus, HVDM_clus_pam_cust)
+ahm_ari_pam_cust <- ARI(cust_clus, ahm_clus_pam_cust)
+
+ubdep_ami_pam_cust <- AMI(cust_clus, ubdep_clus_pam_cust)
+eucl_ami_pam_cust <- AMI(cust_clus, eucl_clus_pam_cust)
+gower_ami_pam_cust <- AMI(cust_clus, gower_clus_pam_cust)
+cos_ami_pam_cust <- AMI(cust_clus, cos_clus_pam_cust)
+HVDM_ami_pam_cust <- AMI(cust_clus, HVDM_clus_pam_cust)
+ahm_ami_pam_cust <- AMI(cust_clus, ahm_clus_pam_cust)
+
+ubdep_sil_pam_cust <- silhouette(ubdep_clus_pam_cust, ubdep_dist_cust)
+eucl_sil_pam_cust <- silhouette(eucl_clus_pam_cust, eucl_dist_cust)
+gower_sil_pam_cust <- silhouette(gower_clus_pam_cust, gower_dist_cust)
+cos_sil_pam_cust <- silhouette(cos_clus_pam_cust, cos_dist_cust)
+HVDM_sil_pam_cust <- silhouette(HVDM_clus_pam_cust, HVDM_dist_cust)
+ahm_sil_pam_cust <- silhouette(ahm_clus_pam_cust, ahm_dist_cust)
+
+ubdep_sil_avg_pam_cust <- mean(ubdep_sil_pam_cust[,3])
+eucl_sil_avg_pam_cust <- mean(eucl_sil_pam_cust[,3])
+gower_sil_avg_pam_cust <- mean(gower_sil_pam_cust[,3])
+cos_sil_avg_pam_cust <- mean(cos_sil_pam_cust[,3])
+HVDM_sil_avg_pam_cust <- mean(HVDM_sil_pam_cust[,3])
+ahm_sil_avg_pam_cust <- mean(ahm_sil_pam_cust[,3])
+```
+
+```{r customer segmentation data clustering stats}
+dist_names_cust <- c('Unbiased Dependant', 'Euclidean', 'Gower', 'Cosine', 'HVDM', 'Ahmad & Dey')
+cust_ari_pam <- c(ubdep_ari_pam_cust, eucl_ari_pam_cust, gower_ari_pam_cust, cos_ari_pam_cust, HVDM_ari_pam_cust, ahm_ari_pam_cust)
+cust_ami_pam <- c(ubdep_ami_pam_cust, eucl_ami_pam_cust, gower_ami_pam_cust, cos_ami_pam_cust, HVDM_ami_pam_cust, ahm_ami_pam_cust)
+cust_avg_sil_pam <- c(ubdep_sil_avg_pam_cust, eucl_sil_avg_pam_cust, gower_sil_avg_pam_cust, cos_sil_avg_pam_cust, HVDM_sil_avg_pam_cust, ahm_sil_avg_pam_cust)
+
+scores_pam_cust <- data.frame(cust_ari_pam, cust_ami_pam, cust_avg_sil_pam, row.names = dist_names_cust)
+colnames(scores_pam_cust) <- c('ARI', 'AMI', 'Average Silhouette Score')
+kable(scores_pam_cust, caption = "Statistics on Customer Segmentation Data")
+```
+
+
+## breast cancer data
+- 30 numerical variables
+- 0 categorical variables
+- 2 clusters (Malignant or Benign)
+
+```{r breast cancer data preprocess}
+breast_data <- read.csv('data/breast-cancer.csv')
+breast_df <- breast_data[,-c(1:2)]
+breast_clus <- breast_data[,2]
+```
+
+```{r breast cancer data cluster, echo=FALSE}
+ubdep_dist_breast <- mdist(breast_df)
+eucl_dist_breast <- dist(breast_df, method="euclidean")
+gower_dist_breast <- daisy(breast_df, metric="gower")
+cos_dist_breast <- 1 - cosine(t(breast_df))
+HVDM_dist_breast <- distances(1, breast_df, 'HVDM')
+# ahm_dist_breast <- distmix(breast_df, method = 'ahmad', idnum=c(1:30))
+
+
+ubdep_pam_breast <- pam(ubdep_dist_breast, 2, diss=TRUE)
+eucl_pam_breast <- pam(eucl_dist_breast, 2, diss=TRUE)
+gower_pam_breast <- pam(gower_dist_breast, 2, diss=TRUE)
+cos_pam_breast <- pam(cos_dist_breast, 2, diss=TRUE)
+HVDM_pam_breast <- pam(HVDM_dist_breast, 2, diss=TRUE)
+# ahm_pam_breast <- pam(ahm_dist_breast, 2, diss=TRUE)
+
+ubdep_clus_pam_breast <- ubdep_pam_breast$clustering
+eucl_clus_pam_breast <- eucl_pam_breast$clustering
+gower_clus_pam_breast <- gower_pam_breast$clustering
+cos_clus_pam_breast <- cos_pam_breast$clustering
+HVDM_clus_pam_breast <- HVDM_pam_breast$clustering
+# ahm_clus_pam_breast <- ahm_pam_breast$clustering
+
+ubdep_ari_pam_breast <- ARI(breast_clus, ubdep_clus_pam_breast)
+eucl_ari_pam_breast <- ARI(breast_clus, eucl_clus_pam_breast)
+gower_ari_pam_breast <- ARI(breast_clus, gower_clus_pam_breast)
+cos_ari_pam_breast <- ARI(breast_clus, cos_clus_pam_breast)
+HVDM_ari_pam_breast <- ARI(breast_clus, HVDM_clus_pam_breast)
+# ahm_ari_pam_breast <- ARI(breast_clus, ahm_clus_pam_breast)
+
+ubdep_ami_pam_breast <- AMI(breast_clus, ubdep_clus_pam_breast)
+eucl_ami_pam_breast <- AMI(breast_clus, eucl_clus_pam_breast)
+gower_ami_pam_breast <- AMI(breast_clus, gower_clus_pam_breast)
+cos_ami_pam_breast <- AMI(breast_clus, cos_clus_pam_breast)
+HVDM_ami_pam_breast <- AMI(breast_clus, HVDM_clus_pam_breast)
+# ahm_ami_pam_breast <- AMI(breast_clus, ahm_clus_pam_breast)
+
+ubdep_sil_pam_breast <- silhouette(ubdep_clus_pam_breast, ubdep_dist_breast)
+eucl_sil_pam_breast <- silhouette(eucl_clus_pam_breast, eucl_dist_breast)
+gower_sil_pam_breast <- silhouette(gower_clus_pam_breast, gower_dist_breast)
+cos_sil_pam_breast <- silhouette(cos_clus_pam_breast, cos_dist_breast)
+HVDM_sil_pam_breast <- silhouette(HVDM_clus_pam_breast, HVDM_dist_breast)
+# ahm_sil_pam_breast <- silhouette(ahm_clus_pam_breast, ahm_dist_breast)
+
+ubdep_sil_avg_pam_breast <- mean(ubdep_sil_pam_breast[,3])
+eucl_sil_avg_pam_breast <- mean(eucl_sil_pam_breast[,3])
+gower_sil_avg_pam_breast <- mean(gower_sil_pam_breast[,3])
+cos_sil_avg_pam_breast <- mean(cos_sil_pam_breast[,3])
+HVDM_sil_avg_pam_breast <- mean(HVDM_sil_pam_breast[,3])
+# ahm_sil_avg_pam_breast <- mean(ahm_sil_pam_breast[,3])
+```
+
+```{r breast data clustering stats}
+dist_names_breast <- c('Unbiased Dependant', 'Euclidean', 'Gower', 'Cosine', 'HVDM')
+breast_ari_pam <- c(ubdep_ari_pam_breast, eucl_ari_pam_breast, gower_ari_pam_breast, cos_ari_pam_breast, HVDM_ari_pam_breast)
+breast_ami_pam <- c(ubdep_ami_pam_breast, eucl_ami_pam_breast, gower_ami_pam_breast, cos_ami_pam_breast, HVDM_ami_pam_breast)
+breast_avg_sil_pam <- c(ubdep_sil_avg_pam_breast, eucl_sil_avg_pam_breast, gower_sil_avg_pam_breast, cos_sil_avg_pam_breast, HVDM_sil_avg_pam_breast)
+
+scores_pam_breast <- data.frame(breast_ari_pam, breast_ami_pam, breast_avg_sil_pam, row.names = dist_names_breast)
+colnames(scores_pam_breast) <- c('ARI', 'AMI', 'Average Silhouette Score')
+kable(scores_pam_breast, caption = "Statistics on Breast Cancer Data")
+```
+
+
+## mobile phone price data
+- 14 numerical variables
+- 6 categorical variables
+- 4 clusters (0,1,2,3)
+
+```{r phone price data preprocess}
+phone_data <- read.csv('data/mobile_price.csv') 
+rand_phone = sample(nrow(phone_data), nrow(phone_data)%/%10)
+phone_df <- phone_data[,-21][rand_phone,]
+phone_clus <- phone_data[,21][rand_phone]
+
+
+for (x in c(2,4,6,18:20)) {
+   phone_df[,x] <- factor(phone_df[,x])
+}
+
+phone_num_df = phone_df
+for (x in c(1:ncol(phone_num_df))){
+  phone_num_df[,x] <- as.numeric(phone_num_df[,x])
+}
+```
+
+```{r phone price data cluster, echo=FALSE}
+ubdep_dist_phone <- mdist(phone_df)
+eucl_dist_phone <- dist(phone_num_df, method="euclidean")
+gower_dist_phone <- daisy(phone_df, metric="gower", 
+                          type=list(asymm=c(2,4,6,18:20)))
+cos_dist_phone <- 1 - cosine(t(phone_num_df))
+HVDM_dist_phone <- distances(1, phone_df, 'HVDM')
+ahm_dist_phone <- distmix(phone_df, method = 'ahmad', 
+                         idnum=c(1,3,5,7:17), idbin=c(2,4,6,18:20))
+
+
+ubdep_pam_phone <- pam(ubdep_dist_phone, 4, diss=TRUE)
+eucl_pam_phone <- pam(eucl_dist_phone, 4, diss=TRUE)
+gower_pam_phone <- pam(gower_dist_phone, 4, diss=TRUE)
+cos_pam_phone <- pam(cos_dist_phone, 4, diss=TRUE)
+HVDM_pam_phone <- pam(HVDM_dist_phone, 4, diss=TRUE)
+ahm_pam_phone <- pam(ahm_dist_phone, 4, diss=TRUE)
+
+ubdep_clus_pam_phone <- ubdep_pam_phone$clustering
+eucl_clus_pam_phone <- eucl_pam_phone$clustering
+gower_clus_pam_phone <- gower_pam_phone$clustering
+cos_clus_pam_phone <- cos_pam_phone$clustering
+HVDM_clus_pam_phone <- HVDM_pam_phone$clustering
+ahm_clus_pam_phone <- ahm_pam_phone$clustering
+
+ubdep_ari_pam_phone <- ARI(phone_clus, ubdep_clus_pam_phone)
+eucl_ari_pam_phone <- ARI(phone_clus, eucl_clus_pam_phone)
+gower_ari_pam_phone <- ARI(phone_clus, gower_clus_pam_phone)
+cos_ari_pam_phone <- ARI(phone_clus, cos_clus_pam_phone)
+HVDM_ari_pam_phone <- ARI(phone_clus, HVDM_clus_pam_phone)
+ahm_ari_pam_phone <- ARI(phone_clus, ahm_clus_pam_phone)
+
+ubdep_ami_pam_phone <- AMI(phone_clus, ubdep_clus_pam_phone)
+eucl_ami_pam_phone <- AMI(phone_clus, eucl_clus_pam_phone)
+gower_ami_pam_phone <- AMI(phone_clus, gower_clus_pam_phone)
+cos_ami_pam_phone <- AMI(phone_clus, cos_clus_pam_phone)
+HVDM_ami_pam_phone <- AMI(phone_clus, HVDM_clus_pam_phone)
+ahm_ami_pam_phone <- AMI(phone_clus, ahm_clus_pam_phone)
+
+ubdep_sil_pam_phone <- silhouette(ubdep_clus_pam_phone, ubdep_dist_phone)
+eucl_sil_pam_phone <- silhouette(eucl_clus_pam_phone, eucl_dist_phone)
+gower_sil_pam_phone <- silhouette(gower_clus_pam_phone, gower_dist_phone)
+cos_sil_pam_phone <- silhouette(cos_clus_pam_phone, cos_dist_phone)
+HVDM_sil_pam_phone <- silhouette(HVDM_clus_pam_phone, HVDM_dist_phone)
+ahm_sil_pam_phone <- silhouette(ahm_clus_pam_phone, ahm_dist_phone)
+
+ubdep_sil_avg_pam_phone <- mean(ubdep_sil_pam_phone[,3])
+eucl_sil_avg_pam_phone <- mean(eucl_sil_pam_phone[,3])
+gower_sil_avg_pam_phone <- mean(gower_sil_pam_phone[,3])
+cos_sil_avg_pam_phone <- mean(cos_sil_pam_phone[,3])
+HVDM_sil_avg_pam_phone <- mean(HVDM_sil_pam_phone[,3])
+ahm_sil_avg_pam_phone <- mean(ahm_sil_pam_phone[,3])
+```
+
+```{r phone price data clustering stats}
+dist_names_phone <- c('Unbiased Dependant', 'Euclidean', 'Gower', 'Cosine', 'HVDM', 'Ahmad & Dey')
+phone_ari_pam <- c(ubdep_ari_pam_phone, eucl_ari_pam_phone, gower_ari_pam_phone, cos_ari_pam_phone, HVDM_ari_pam_phone, ahm_ari_pam_phone)
+phone_ami_pam <- c(ubdep_ami_pam_phone, eucl_ami_pam_phone, gower_ami_pam_phone, cos_ami_pam_phone, HVDM_ami_pam_phone, ahm_ami_pam_phone)
+phone_avg_sil_pam <- c(ubdep_sil_avg_pam_phone, eucl_sil_avg_pam_phone, gower_sil_avg_pam_phone, cos_sil_avg_pam_phone, HVDM_sil_avg_pam_phone, ahm_sil_avg_pam_phone)
+
+scores_pam_phone <- data.frame(phone_ari_pam, phone_ami_pam, phone_avg_sil_pam, row.names = dist_names_phone)
+colnames(scores_pam_phone) <- c('ARI', 'AMI', 'Average Silhouette Score')
+kable(scores_pam_phone, caption = "Statistics on Phone Price Data")
+```
+
+
+```{r stats by distance, echo=FALSE}
+ubdep_ari_pam <- c(ubdep_ari_pam_cars, ubdep_ari_pam_heart, ubdep_ari_pam_bank, ubdep_ari_pam_cust, ubdep_ari_pam_breast, ubdep_ari_pam_phone)
+ubdep_ami_pam <- c(ubdep_ami_pam_cars, ubdep_ami_pam_heart, ubdep_ami_pam_bank, ubdep_ami_pam_cust, ubdep_ami_pam_breast, ubdep_ami_pam_phone)
+ubdep_avg_sil_pam <- c(ubdep_sil_avg_pam_cars,ubdep_sil_avg_pam_heart, ubdep_sil_avg_pam_bank, ubdep_sil_avg_pam_cust, ubdep_sil_avg_pam_breast, ubdep_sil_avg_pam_phone)
+
+eucl_ari_pam <- c(eucl_ari_pam_cars, eucl_ari_pam_heart, eucl_ari_pam_bank, eucl_ari_pam_cust, eucl_ari_pam_breast, eucl_ari_pam_phone)
+eucl_ami_pam <- c(eucl_ami_pam_cars, eucl_ami_pam_heart, eucl_ami_pam_bank, eucl_ami_pam_cust, eucl_ami_pam_breast, eucl_ami_pam_phone)
+eucl_avg_sil_pam <- c(eucl_sil_avg_pam_cars,eucl_sil_avg_pam_heart, eucl_sil_avg_pam_bank, eucl_sil_avg_pam_cust, eucl_sil_avg_pam_breast, eucl_sil_avg_pam_phone)
+
+gower_ari_pam <- c(gower_ari_pam_cars, gower_ari_pam_heart, gower_ari_pam_bank, gower_ari_pam_cust, gower_ari_pam_breast, gower_ari_pam_phone)
+gower_ami_pam <- c(gower_ami_pam_cars, gower_ami_pam_heart, gower_ami_pam_bank, gower_ami_pam_cust, gower_ami_pam_breast, gower_ami_pam_phone)
+gower_avg_sil_pam <- c(gower_sil_avg_pam_cars,gower_sil_avg_pam_heart, gower_sil_avg_pam_bank, gower_sil_avg_pam_cust, gower_sil_avg_pam_breast, gower_sil_avg_pam_phone)
+
+cos_ari_pam <- c(cos_ari_pam_cars, cos_ari_pam_heart, cos_ari_pam_bank, cos_ari_pam_cust, cos_ari_pam_breast, cos_ari_pam_phone)
+cos_ami_pam <- c(cos_ami_pam_cars, cos_ami_pam_heart, cos_ami_pam_bank, cos_ami_pam_cust, cos_ami_pam_breast, cos_ami_pam_phone)
+cos_avg_sil_pam <- c(cos_sil_avg_pam_cars,cos_sil_avg_pam_heart, cos_sil_avg_pam_bank, cos_sil_avg_pam_cust, cos_sil_avg_pam_breast, cos_sil_avg_pam_phone)
+
+HVDM_ari_pam <- c(HVDM_ari_pam_cars, HVDM_ari_pam_heart, HVDM_ari_pam_bank, HVDM_ari_pam_cust, HVDM_ari_pam_breast, HVDM_ari_pam_phone)
+HVDM_ami_pam <- c(HVDM_ami_pam_cars, HVDM_ami_pam_heart, HVDM_ami_pam_bank, HVDM_ami_pam_cust, HVDM_ami_pam_breast, HVDM_ami_pam_phone)
+HVDM_avg_sil_pam <- c(HVDM_sil_avg_pam_cars,HVDM_sil_avg_pam_heart, HVDM_sil_avg_pam_bank, HVDM_sil_avg_pam_cust, HVDM_sil_avg_pam_breast, HVDM_sil_avg_pam_phone)
+
+ahm_ari_pam <- c(ahm_ari_pam_heart, ahm_ari_pam_bank, ahm_ari_pam_cust, ahm_ari_pam_phone)
+ahm_ami_pam <- c(ahm_ami_pam_heart, ahm_ami_pam_bank, ahm_ami_pam_cust, ahm_ami_pam_phone)
+ahm_avg_sil_pam <- c(ahm_sil_avg_pam_heart, ahm_sil_avg_pam_bank, ahm_sil_avg_pam_cust, ahm_sil_avg_pam_phone)
+```
+
+```{r average stats}
+dist_names_all <- c('Unbiased Dependant', 'Euclidean', 'Gower', 'Cosine', 'HVDM', 'Ahmad & Dey')
+avg_ari_all_pam <- c(mean(ubdep_ari_pam), mean(eucl_ari_pam), mean(gower_ari_pam), mean(cos_ari_pam), mean(HVDM_ari_pam), mean(ahm_ari_pam))
+avg_ami_all_pam <- c(mean(ubdep_ami_pam), mean(eucl_ami_pam), mean(gower_ami_pam), mean(cos_ami_pam), mean(HVDM_ami_pam), mean(ahm_ami_pam))
+avg_sil_all_pam <- c(mean(ubdep_avg_sil_pam), mean(eucl_avg_sil_pam), mean(gower_avg_sil_pam), mean(cos_avg_sil_pam), mean(HVDM_avg_sil_pam), mean(ahm_avg_sil_pam))
+
+std_ari_all_pam <- c(sd(ubdep_ari_pam), sd(eucl_ari_pam), sd(gower_ari_pam), sd(cos_ari_pam), sd(HVDM_ari_pam), sd(ahm_ari_pam))
+std_ami_all_pam <- c(sd(ubdep_ami_pam), sd(eucl_ami_pam), sd(gower_ami_pam), sd(cos_ami_pam), sd(HVDM_ami_pam), sd(ahm_ami_pam))
+std_sil_all_pam <- c(sd(ubdep_avg_sil_pam), sd(eucl_avg_sil_pam), sd(gower_avg_sil_pam), sd(cos_avg_sil_pam), sd(HVDM_avg_sil_pam), sd(ahm_avg_sil_pam))
+
+scores_mean_all_pam <- data.frame(avg_ari_all_pam, avg_ami_all_pam, avg_sil_all_pam, row.names = dist_names_all)
+colnames(scores_mean_all_pam) <- c('ARI', 'AMI', 'Average Silhouette Score')
+kable(scores_mean_all_pam, caption = "Average Statistics on All Datasets with pam")
+
+scores_std_all_pam <- data.frame(std_ari_all_pam, std_ami_all_pam, std_sil_all_pam, row.names = dist_names_all)
+colnames(scores_std_all_pam) <- c('ARI', 'AMI', 'Average Silhouette Score')
+kable(scores_std_all_pam, caption = "Standard Deviation of Statistics on All Datasets with pam")
+```
+
+# skm clustering
+
+## mtcars data
+- 7 numerical variables
+- 3 categorical variables
+- 2 clusters (0:automatic, 1:manual)
+
+
+```{r mtcars cluster skm, echo=FALSE}
+ubdep_skm_cars <- skm(ubdep_dist_cars, 2)
+eucl_skm_cars <- skm(eucl_dist_cars, 2)
+gower_skm_cars <- skm(gower_dist_cars, 2)
+cos_skm_cars <- skm(cos_dist_cars, 2)
+HVDM_skm_cars <- skm(HVDM_dist_cars, 2)
+#ahm_skm_cars <- skm(ahm_dist_cars, 2)
+
+ubdep_clus_skm_cars <- ubdep_skm_cars$cluster
+eucl_clus_skm_cars <- eucl_skm_cars$cluster
+gower_clus_skm_cars <- gower_skm_cars$cluster
+cos_clus_skm_cars <- cos_skm_cars$cluster
+HVDM_clus_skm_cars <- HVDM_skm_cars$cluster
+#ahm_clus_skm_cars <- ahm_skm_cars$cluster
+
+ubdep_ari_skm_cars <- ARI(cars_clus, ubdep_clus_skm_cars)
+eucl_ari_skm_cars <- ARI(cars_clus, eucl_clus_skm_cars)
+gower_ari_skm_cars <- ARI(cars_clus, gower_clus_skm_cars)
+cos_ari_skm_cars <- ARI(cars_clus, cos_clus_skm_cars)
+HVDM_ari_skm_cars <- ARI(cars_clus, HVDM_clus_skm_cars)
+#ahm_ari_skm_cars <- ARI(cars_clus, ahm_clus_skm_cars)
+
+ubdep_ami_skm_cars <- AMI(cars_clus, ubdep_clus_skm_cars)
+eucl_ami_skm_cars <- AMI(cars_clus, eucl_clus_skm_cars)
+gower_ami_skm_cars <- AMI(cars_clus, gower_clus_skm_cars)
+cos_ami_skm_cars <- AMI(cars_clus, cos_clus_skm_cars)
+HVDM_ami_skm_cars <- AMI(cars_clus, HVDM_clus_skm_cars)
+#ahm_ami_skm_cars <- AMI(cars_clus, ahm_clus_skm_cars)
+
+ubdep_sil_skm_cars <- silhouette(ubdep_clus_skm_cars, ubdep_dist_cars)
+eucl_sil_skm_cars <- silhouette(eucl_clus_skm_cars, eucl_dist_cars)
+gower_sil_skm_cars <- silhouette(gower_clus_skm_cars, gower_dist_cars)
+cos_sil_skm_cars <- silhouette(cos_clus_skm_cars, cos_dist_cars)
+HVDM_sil_skm_cars <- silhouette(HVDM_clus_skm_cars, HVDM_dist_cars)
+#ahm_sil_skm_cars <- silhouette(ahm_clus_skm_cars, ahm_dist_cars)
+
+ubdep_sil_avg_skm_cars <- mean(ubdep_sil_skm_cars[,3])
+eucl_sil_avg_skm_cars <- mean(eucl_sil_skm_cars[,3])
+gower_sil_avg_skm_cars <- mean(gower_sil_skm_cars[,3])
+cos_sil_avg_skm_cars <- mean(cos_sil_skm_cars[,3])
+HVDM_sil_avg_skm_cars <- mean(HVDM_sil_skm_cars[,3])
+#ahm_sil_avg_skm_cars <- mean(ahm_sil_skm_cars[,3])
+```
+
+```{r mtcars cluster stats skm}
+dist_names_cars <- c('Unbiased Dependant', 'Euclidean', 'Gower', 'Cosine', 'HVDM')
+cars_ari_skm <- c(ubdep_ari_skm_cars, eucl_ari_skm_cars, gower_ari_skm_cars, cos_ari_skm_cars, HVDM_ari_skm_cars)
+cars_ami_skm <- c(ubdep_ami_skm_cars, eucl_ami_skm_cars, gower_ami_skm_cars, cos_ami_skm_cars, HVDM_ami_skm_cars)
+cars_avg_sil_skm <- c(ubdep_sil_avg_skm_cars, eucl_sil_avg_skm_cars, gower_sil_avg_skm_cars, cos_sil_avg_skm_cars, HVDM_sil_avg_skm_cars)
+
+scores_skm_cars <- data.frame(cars_ari_skm, cars_ami_skm, cars_avg_sil_skm, row.names = dist_names_cars)
+colnames(scores_skm_cars) <- c('ARI', 'AMI', 'Average Silhouette Score')
+kable(scores_skm_cars, caption = "Statistics on mtcars Data with skm")
+```
+
+
+## cleveland heart data
+- 5 numerical variables
+- 8 categorical variables
+- 2 clusters (0,1)
+
+```{r cleveland heart data cluster skm, echo=FALSE}
+ubdep_skm_heart <- skm(ubdep_dist_heart, 2)
+eucl_skm_heart <- skm(eucl_dist_heart, 2)
+gower_skm_heart <- skm(gower_dist_heart, 2)
+cos_skm_heart <- skm(cos_dist_heart, 2)
+HVDM_skm_heart <- skm(HVDM_dist_heart, 2)
+ahm_skm_heart <- skm(ahm_dist_heart, 2)
+
+ubdep_clus_skm_heart <- ubdep_skm_heart$cluster
+eucl_clus_skm_heart <- eucl_skm_heart$cluster
+gower_clus_skm_heart <- gower_skm_heart$cluster
+cos_clus_skm_heart <- cos_skm_heart$cluster
+HVDM_clus_skm_heart <- HVDM_skm_heart$cluster
+ahm_clus_skm_heart <- ahm_skm_heart$cluster
+
+ubdep_ari_skm_heart <- ARI(heart_clus, ubdep_clus_skm_heart)
+eucl_ari_skm_heart <- ARI(heart_clus, eucl_clus_skm_heart)
+gower_ari_skm_heart <- ARI(heart_clus, gower_clus_skm_heart)
+cos_ari_skm_heart <- ARI(heart_clus, cos_clus_skm_heart)
+HVDM_ari_skm_heart <- ARI(heart_clus, HVDM_clus_skm_heart)
+ahm_ari_skm_heart <- ARI(heart_clus, ahm_clus_skm_heart)
+
+ubdep_ami_skm_heart <- AMI(heart_clus, ubdep_clus_skm_heart)
+eucl_ami_skm_heart <- AMI(heart_clus, eucl_clus_skm_heart)
+gower_ami_skm_heart <- AMI(heart_clus, gower_clus_skm_heart)
+cos_ami_skm_heart <- AMI(heart_clus, cos_clus_skm_heart)
+HVDM_ami_skm_heart <- AMI(heart_clus, HVDM_clus_skm_heart)
+ahm_ami_skm_heart <- AMI(heart_clus, ahm_clus_skm_heart)
+
+ubdep_sil_skm_heart <- silhouette(ubdep_clus_skm_heart, ubdep_dist_heart)
+eucl_sil_skm_heart <- silhouette(eucl_clus_skm_heart, eucl_dist_heart)
+gower_sil_skm_heart <- silhouette(gower_clus_skm_heart, gower_dist_heart)
+cos_sil_skm_heart <- silhouette(cos_clus_skm_heart, cos_dist_heart)
+HVDM_sil_skm_heart <- silhouette(HVDM_clus_skm_heart, HVDM_dist_heart)
+ahm_sil_skm_heart <- silhouette(ahm_clus_skm_heart, ahm_dist_heart)
+
+ubdep_sil_avg_skm_heart <- mean(ubdep_sil_skm_heart[,3])
+eucl_sil_avg_skm_heart <- mean(eucl_sil_skm_heart[,3])
+gower_sil_avg_skm_heart <- mean(gower_sil_skm_heart[,3])
+cos_sil_avg_skm_heart <- mean(cos_sil_skm_heart[,3])
+HVDM_sil_avg_skm_heart <- mean(HVDM_sil_skm_heart[,3])
+ahm_sil_avg_skm_heart <- mean(ahm_sil_skm_heart[,3])
+
+```
+
+
+```{r cleveland heart data cluster stats skm}
+dist_names_heart <- c('Unbiased Dependant', 'Euclidean', 'Gower', 'Cosine', 'HVDM', 'Ahmad & Dey')
+heart_ari_skm <- c(ubdep_ari_skm_heart, eucl_ari_skm_heart, gower_ari_skm_heart, cos_ari_skm_heart, HVDM_ari_skm_heart, ahm_ari_skm_heart)
+heart_ami_skm <- c(ubdep_ami_skm_heart, eucl_ami_skm_heart, gower_ami_skm_heart, cos_ami_skm_heart, HVDM_ami_skm_heart, ahm_ami_skm_heart)
+heart_avg_sil_skm <- c(ubdep_sil_avg_skm_heart, eucl_sil_avg_skm_heart, gower_sil_avg_skm_heart, cos_sil_avg_skm_heart, HVDM_sil_avg_skm_heart, ahm_sil_avg_skm_heart)
+
+scores_skm_heart <- data.frame(heart_ari_skm, heart_ami_skm, heart_avg_sil_skm, row.names = dist_names_heart)
+colnames(scores_skm_heart) <- c('ARI', 'AMI', 'Average Silhouette Score')
+kable(scores_skm_heart, caption = "Statistics on Cleveland Heart Data with skm")
+```
+
+
+## banking data
+- 6 numerical variables
+- 10 categorical variables
+- 2 clusters ('yes', 'no')
+
+```{r banking data cluster skm, echo=FALSE}
+ubdep_skm_bank <- skm(ubdep_dist_bank, 2)
+eucl_skm_bank <- skm(eucl_dist_bank, 2)
+gower_skm_bank <- skm(gower_dist_bank, 2)
+cos_skm_bank <- skm(cos_dist_bank, 2)
+HVDM_skm_bank <- skm(HVDM_dist_bank, 2)
+ahm_skm_bank <- skm(ahm_dist_bank, 2)
+
+ubdep_clus_skm_bank <- ubdep_skm_bank$cluster
+eucl_clus_skm_bank <- eucl_skm_bank$cluster
+gower_clus_skm_bank <- gower_skm_bank$cluster
+cos_clus_skm_bank <- cos_skm_bank$cluster
+HVDM_clus_skm_bank <- HVDM_skm_bank$cluster
+ahm_clus_skm_bank <- ahm_skm_bank$cluster
+
+ubdep_ari_skm_bank <- ARI(bank_clus, ubdep_clus_skm_bank)
+eucl_ari_skm_bank <- ARI(bank_clus, eucl_clus_skm_bank)
+gower_ari_skm_bank <- ARI(bank_clus, gower_clus_skm_bank)
+cos_ari_skm_bank <- ARI(bank_clus, cos_clus_skm_bank)
+HVDM_ari_skm_bank <- ARI(bank_clus, HVDM_clus_skm_bank)
+ahm_ari_skm_bank <- ARI(bank_clus, ahm_clus_skm_bank)
+
+ubdep_ami_skm_bank <- AMI(bank_clus, ubdep_clus_skm_bank)
+eucl_ami_skm_bank <- AMI(bank_clus, eucl_clus_skm_bank)
+gower_ami_skm_bank <- AMI(bank_clus, gower_clus_skm_bank)
+cos_ami_skm_bank <- AMI(bank_clus, cos_clus_skm_bank)
+HVDM_ami_skm_bank <- AMI(bank_clus, HVDM_clus_skm_bank)
+ahm_ami_skm_bank <- AMI(bank_clus, ahm_clus_skm_bank)
+
+ubdep_sil_skm_bank <- silhouette(ubdep_clus_skm_bank, ubdep_dist_bank)
+eucl_sil_skm_bank <- silhouette(eucl_clus_skm_bank, eucl_dist_bank)
+gower_sil_skm_bank <- silhouette(gower_clus_skm_bank, gower_dist_bank)
+cos_sil_skm_bank <- silhouette(cos_clus_skm_bank, cos_dist_bank)
+HVDM_sil_skm_bank <- silhouette(HVDM_clus_skm_bank, HVDM_dist_bank)
+ahm_sil_skm_bank <- silhouette(ahm_clus_skm_bank, ahm_dist_bank)
+
+ubdep_sil_avg_skm_bank <- mean(ubdep_sil_skm_bank[,3])
+eucl_sil_avg_skm_bank <- mean(eucl_sil_skm_bank[,3])
+gower_sil_avg_skm_bank <- mean(gower_sil_skm_bank[,3])
+cos_sil_avg_skm_bank <- mean(cos_sil_skm_bank[,3])
+HVDM_sil_avg_skm_bank <- mean(HVDM_sil_skm_bank[,3])
+ahm_sil_avg_skm_bank <- mean(ahm_sil_skm_bank[,3])
+
+```
+
+```{r banking data cluster stats skm}
+dist_names_bank <- c('Unbiased Dependant', 'Euclidean', 'Gower', 'Cosine', 'HVDM', 'Ahmad & Dey')
+bank_ari_skm <- c(ubdep_ari_skm_bank, eucl_ari_skm_bank, gower_ari_skm_bank, cos_ari_skm_bank, HVDM_ari_skm_bank, ahm_ari_skm_bank)
+bank_ami_skm <- c(ubdep_ami_skm_bank, eucl_ami_skm_bank, gower_ami_skm_bank, cos_ami_skm_bank, HVDM_ami_skm_bank, ahm_ami_skm_bank)
+bank_avg_sil_skm <- c(ubdep_sil_avg_skm_bank, eucl_sil_avg_skm_bank, gower_sil_avg_skm_bank, cos_sil_avg_skm_bank, HVDM_sil_avg_skm_bank, ahm_sil_avg_skm_bank)
+
+scores_skm_bank <- data.frame(bank_ari_skm, bank_ami_skm, bank_avg_sil_skm, row.names = dist_names_bank)
+colnames(scores_skm_bank) <- c('ARI', 'AMI', 'Average Silhouette Score')
+kable(scores_skm_bank, caption = "Statistics on Banking Data")
+```
+
+
+## customer segmentation data
+- 3 numerical variables
+- 6 categorical variables
+- 4 clusters (A,B,C,D)
+
+
+```{r customer segmentation data cluster skm, echo=FALSE}
+ubdep_skm_cust <- skm(ubdep_dist_cust, 4)
+eucl_skm_cust <- skm(eucl_dist_cust, 4)
+gower_skm_cust <- skm(gower_dist_cust, 4)
+cos_skm_cust <- skm(cos_dist_cust, 4)
+HVDM_skm_cust <- skm(HVDM_dist_cust, 4)
+ahm_skm_cust <- skm(ahm_dist_cust, 4)
+
+ubdep_clus_skm_cust <- ubdep_skm_cust$cluster
+eucl_clus_skm_cust <- eucl_skm_cust$cluster
+gower_clus_skm_cust <- gower_skm_cust$cluster
+cos_clus_skm_cust <- cos_skm_cust$cluster
+HVDM_clus_skm_cust <- HVDM_skm_cust$cluster
+ahm_clus_skm_cust <- ahm_skm_cust$cluster
+
+ubdep_ari_skm_cust <- ARI(cust_clus, ubdep_clus_skm_cust)
+eucl_ari_skm_cust <- ARI(cust_clus, eucl_clus_skm_cust)
+gower_ari_skm_cust <- ARI(cust_clus, gower_clus_skm_cust)
+cos_ari_skm_cust <- ARI(cust_clus, cos_clus_skm_cust)
+HVDM_ari_skm_cust <- ARI(cust_clus, HVDM_clus_skm_cust)
+ahm_ari_skm_cust <- ARI(cust_clus, ahm_clus_skm_cust)
+
+ubdep_ami_skm_cust <- AMI(cust_clus, ubdep_clus_skm_cust)
+eucl_ami_skm_cust <- AMI(cust_clus, eucl_clus_skm_cust)
+gower_ami_skm_cust <- AMI(cust_clus, gower_clus_skm_cust)
+cos_ami_skm_cust <- AMI(cust_clus, cos_clus_skm_cust)
+HVDM_ami_skm_cust <- AMI(cust_clus, HVDM_clus_skm_cust)
+ahm_ami_skm_cust <- AMI(cust_clus, ahm_clus_skm_cust)
+
+ubdep_sil_skm_cust <- silhouette(ubdep_clus_skm_cust, ubdep_dist_cust)
+eucl_sil_skm_cust <- silhouette(eucl_clus_skm_cust, eucl_dist_cust)
+gower_sil_skm_cust <- silhouette(gower_clus_skm_cust, gower_dist_cust)
+cos_sil_skm_cust <- silhouette(cos_clus_skm_cust, cos_dist_cust)
+HVDM_sil_skm_cust <- silhouette(HVDM_clus_skm_cust, HVDM_dist_cust)
+ahm_sil_skm_cust <- silhouette(ahm_clus_skm_cust, ahm_dist_cust)
+
+ubdep_sil_avg_skm_cust <- mean(ubdep_sil_skm_cust[,3])
+eucl_sil_avg_skm_cust <- mean(eucl_sil_skm_cust[,3])
+gower_sil_avg_skm_cust <- mean(gower_sil_skm_cust[,3])
+cos_sil_avg_skm_cust <- mean(cos_sil_skm_cust[,3])
+HVDM_sil_avg_skm_cust <- mean(HVDM_sil_skm_cust[,3])
+ahm_sil_avg_skm_cust <- mean(ahm_sil_skm_cust[,3])
+```
+
+```{r customer segmentation data cluster stats skm}
+dist_names_cust <- c('Unbiased Dependant', 'Euclidean', 'Gower', 'Cosine', 'HVDM', 'Ahmad & Dey')
+cust_ari_skm <- c(ubdep_ari_skm_cust, eucl_ari_skm_cust, gower_ari_skm_cust, cos_ari_skm_cust, HVDM_ari_skm_cust, ahm_ari_skm_cust)
+cust_ami_skm <- c(ubdep_ami_skm_cust, eucl_ami_skm_cust, gower_ami_skm_cust, cos_ami_skm_cust, HVDM_ami_skm_cust, ahm_ami_skm_cust)
+cust_avg_sil_skm <- c(ubdep_sil_avg_skm_cust, eucl_sil_avg_skm_cust, gower_sil_avg_skm_cust, cos_sil_avg_skm_cust, HVDM_sil_avg_skm_cust, ahm_sil_avg_skm_cust)
+
+scores_skm_cust <- data.frame(cust_ari_skm, cust_ami_skm, cust_avg_sil_skm, row.names = dist_names_cust)
+colnames(scores_skm_cust) <- c('ARI', 'AMI', 'Average Silhouette Score')
+kable(scores_skm_cust, caption = "Statistics on Customer Segmentation Data")
+```
+
+
+## breast cancer data
+- 30 numerical variables
+- 0 categorical variables
+- 2 clusters (Malignant or Benign)
+
+```{r breast cancer data cluster skm, echo=FALSE}
+ubdep_skm_breast <- skm(ubdep_dist_breast, 2)
+eucl_skm_breast <- skm(eucl_dist_breast, 2)
+gower_skm_breast <- skm(gower_dist_breast, 2)
+cos_skm_breast <- skm(cos_dist_breast, 2)
+HVDM_skm_breast <- skm(HVDM_dist_breast, 2)
+# ahm_skm_breast <- skm(ahm_dist_breast, 2)
+
+ubdep_clus_skm_breast <- ubdep_skm_breast$cluster
+eucl_clus_skm_breast <- eucl_skm_breast$cluster
+gower_clus_skm_breast <- gower_skm_breast$cluster
+cos_clus_skm_breast <- cos_skm_breast$cluster
+HVDM_clus_skm_breast <- HVDM_skm_breast$cluster
+# ahm_clus_skm_breast <- ahm_skm_breast$cluster
+
+ubdep_ari_skm_breast <- ARI(breast_clus, ubdep_clus_skm_breast)
+eucl_ari_skm_breast <- ARI(breast_clus, eucl_clus_skm_breast)
+gower_ari_skm_breast <- ARI(breast_clus, gower_clus_skm_breast)
+cos_ari_skm_breast <- ARI(breast_clus, cos_clus_skm_breast)
+HVDM_ari_skm_breast <- ARI(breast_clus, HVDM_clus_skm_breast)
+# ahm_ari_skm_breast <- ARI(breast_clus, ahm_clus_skm_breast)
+
+ubdep_ami_skm_breast <- AMI(breast_clus, ubdep_clus_skm_breast)
+eucl_ami_skm_breast <- AMI(breast_clus, eucl_clus_skm_breast)
+gower_ami_skm_breast <- AMI(breast_clus, gower_clus_skm_breast)
+cos_ami_skm_breast <- AMI(breast_clus, cos_clus_skm_breast)
+HVDM_ami_skm_breast <- AMI(breast_clus, HVDM_clus_skm_breast)
+# ahm_ami_skm_breast <- AMI(breast_clus, ahm_clus_skm_breast)
+
+ubdep_sil_skm_breast <- silhouette(ubdep_clus_skm_breast, ubdep_dist_breast)
+eucl_sil_skm_breast <- silhouette(eucl_clus_skm_breast, eucl_dist_breast)
+gower_sil_skm_breast <- silhouette(gower_clus_skm_breast, gower_dist_breast)
+cos_sil_skm_breast <- silhouette(cos_clus_skm_breast, cos_dist_breast)
+HVDM_sil_skm_breast <- silhouette(HVDM_clus_skm_breast, HVDM_dist_breast)
+# ahm_sil_skm_breast <- silhouette(ahm_clus_skm_breast, ahm_dist_breast)
+
+ubdep_sil_avg_skm_breast <- mean(ubdep_sil_skm_breast[,3])
+eucl_sil_avg_skm_breast <- mean(eucl_sil_skm_breast[,3])
+gower_sil_avg_skm_breast <- mean(gower_sil_skm_breast[,3])
+cos_sil_avg_skm_breast <- mean(cos_sil_skm_breast[,3])
+HVDM_sil_avg_skm_breast <- mean(HVDM_sil_skm_breast[,3])
+# ahm_sil_avg_skm_breast <- mean(ahm_sil_skm_breast[,3])
+```
+
+```{r breast data cluster stats skm}
+dist_names_breast <- c('Unbiased Dependant', 'Euclidean', 'Gower', 'Cosine', 'HVDM')
+breast_ari_skm <- c(ubdep_ari_skm_breast, eucl_ari_skm_breast, gower_ari_skm_breast, cos_ari_skm_breast, HVDM_ari_skm_breast)
+breast_ami_skm <- c(ubdep_ami_skm_breast, eucl_ami_skm_breast, gower_ami_skm_breast, cos_ami_skm_breast, HVDM_ami_skm_breast)
+breast_avg_sil_skm <- c(ubdep_sil_avg_skm_breast, eucl_sil_avg_skm_breast, gower_sil_avg_skm_breast, cos_sil_avg_skm_breast, HVDM_sil_avg_skm_breast)
+
+scores_skm_breast <- data.frame(breast_ari_skm, breast_ami_skm, breast_avg_sil_skm, row.names = dist_names_breast)
+colnames(scores_skm_breast) <- c('ARI', 'AMI', 'Average Silhouette Score')
+kable(scores_skm_breast, caption = "Statistics on Breast Cancer Data")
+```
+
+
+## mobile phone price data
+- 14 numerical variables
+- 6 categorical variables
+- 4 clusters (0,1,2,3)
+
+```{r phone price data cluster skm, echo=FALSE}
+ubdep_skm_phone <- skm(ubdep_dist_phone, 4)
+eucl_skm_phone <- skm(eucl_dist_phone, 4)
+gower_skm_phone <- skm(gower_dist_phone, 4)
+cos_skm_phone <- skm(cos_dist_phone, 4)
+HVDM_skm_phone <- skm(HVDM_dist_phone, 4)
+ahm_skm_phone <- skm(ahm_dist_phone, 4)
+
+ubdep_clus_skm_phone <- ubdep_skm_phone$cluster
+eucl_clus_skm_phone <- eucl_skm_phone$cluster
+gower_clus_skm_phone <- gower_skm_phone$cluster
+cos_clus_skm_phone <- cos_skm_phone$cluster
+HVDM_clus_skm_phone <- HVDM_skm_phone$cluster
+ahm_clus_skm_phone <- ahm_skm_phone$cluster
+
+ubdep_ari_skm_phone <- ARI(phone_clus, ubdep_clus_skm_phone)
+eucl_ari_skm_phone <- ARI(phone_clus, eucl_clus_skm_phone)
+gower_ari_skm_phone <- ARI(phone_clus, gower_clus_skm_phone)
+cos_ari_skm_phone <- ARI(phone_clus, cos_clus_skm_phone)
+HVDM_ari_skm_phone <- ARI(phone_clus, HVDM_clus_skm_phone)
+ahm_ari_skm_phone <- ARI(phone_clus, ahm_clus_skm_phone)
+
+ubdep_ami_skm_phone <- AMI(phone_clus, ubdep_clus_skm_phone)
+eucl_ami_skm_phone <- AMI(phone_clus, eucl_clus_skm_phone)
+gower_ami_skm_phone <- AMI(phone_clus, gower_clus_skm_phone)
+cos_ami_skm_phone <- AMI(phone_clus, cos_clus_skm_phone)
+HVDM_ami_skm_phone <- AMI(phone_clus, HVDM_clus_skm_phone)
+ahm_ami_skm_phone <- AMI(phone_clus, ahm_clus_skm_phone)
+
+ubdep_sil_skm_phone <- silhouette(ubdep_clus_skm_phone, ubdep_dist_phone)
+eucl_sil_skm_phone <- silhouette(eucl_clus_skm_phone, eucl_dist_phone)
+gower_sil_skm_phone <- silhouette(gower_clus_skm_phone, gower_dist_phone)
+cos_sil_skm_phone <- silhouette(cos_clus_skm_phone, cos_dist_phone)
+HVDM_sil_skm_phone <- silhouette(HVDM_clus_skm_phone, HVDM_dist_phone)
+ahm_sil_skm_phone <- silhouette(ahm_clus_skm_phone, ahm_dist_phone)
+
+ubdep_sil_avg_skm_phone <- mean(ubdep_sil_skm_phone[,3])
+eucl_sil_avg_skm_phone <- mean(eucl_sil_skm_phone[,3])
+gower_sil_avg_skm_phone <- mean(gower_sil_skm_phone[,3])
+cos_sil_avg_skm_phone <- mean(cos_sil_skm_phone[,3])
+HVDM_sil_avg_skm_phone <- mean(HVDM_sil_skm_phone[,3])
+ahm_sil_avg_skm_phone <- mean(ahm_sil_skm_phone[,3])
+```
+
+```{r phone price data cluster stats skm}
+dist_names_phone <- c('Unbiased Dependant', 'Euclidean', 'Gower', 'Cosine', 'HVDM', 'Ahmad & Dey')
+phone_ari_skm <- c(ubdep_ari_skm_phone, eucl_ari_skm_phone, gower_ari_skm_phone, cos_ari_skm_phone, HVDM_ari_skm_phone, ahm_ari_skm_phone)
+phone_ami_skm <- c(ubdep_ami_skm_phone, eucl_ami_skm_phone, gower_ami_skm_phone, cos_ami_skm_phone, HVDM_ami_skm_phone, ahm_ami_skm_phone)
+phone_avg_sil_skm <- c(ubdep_sil_avg_skm_phone, eucl_sil_avg_skm_phone, gower_sil_avg_skm_phone, cos_sil_avg_skm_phone, HVDM_sil_avg_skm_phone, ahm_sil_avg_skm_phone)
+
+scores_skm_phone <- data.frame(phone_ari_skm, phone_ami_skm, phone_avg_sil_skm, row.names = dist_names_phone)
+colnames(scores_skm_phone) <- c('ARI', 'AMI', 'Average Silhouette Score')
+kable(scores_skm_phone, caption = "Statistics on Phone Price Data")
+```
+
+
+```{r stats by distance skm, echo=FALSE}
+ubdep_ari_skm <- c(ubdep_ari_skm_cars, ubdep_ari_skm_heart, ubdep_ari_skm_bank, ubdep_ari_skm_cust, ubdep_ari_skm_breast, ubdep_ari_skm_phone)
+ubdep_ami_skm <- c(ubdep_ami_skm_cars, ubdep_ami_skm_heart, ubdep_ami_skm_bank, ubdep_ami_skm_cust, ubdep_ami_skm_breast, ubdep_ami_skm_phone)
+ubdep_avg_sil_skm <- c(ubdep_sil_avg_skm_cars,ubdep_sil_avg_skm_heart, ubdep_sil_avg_skm_bank, ubdep_sil_avg_skm_cust, ubdep_sil_avg_skm_breast, ubdep_sil_avg_skm_phone)
+
+eucl_ari_skm <- c(eucl_ari_skm_cars, eucl_ari_skm_heart, eucl_ari_skm_bank, eucl_ari_skm_cust, eucl_ari_skm_breast, eucl_ari_skm_phone)
+eucl_ami_skm <- c(eucl_ami_skm_cars, eucl_ami_skm_heart, eucl_ami_skm_bank, eucl_ami_skm_cust, eucl_ami_skm_breast, eucl_ami_skm_phone)
+eucl_avg_sil_skm <- c(eucl_sil_avg_skm_cars,eucl_sil_avg_skm_heart, eucl_sil_avg_skm_bank, eucl_sil_avg_skm_cust, eucl_sil_avg_skm_breast, eucl_sil_avg_skm_phone)
+
+gower_ari_skm <- c(gower_ari_skm_cars, gower_ari_skm_heart, gower_ari_skm_bank, gower_ari_skm_cust, gower_ari_skm_breast, gower_ari_skm_phone)
+gower_ami_skm <- c(gower_ami_skm_cars, gower_ami_skm_heart, gower_ami_skm_bank, gower_ami_skm_cust, gower_ami_skm_breast, gower_ami_skm_phone)
+gower_avg_sil_skm <- c(gower_sil_avg_skm_cars,gower_sil_avg_skm_heart, gower_sil_avg_skm_bank, gower_sil_avg_skm_cust, gower_sil_avg_skm_breast, gower_sil_avg_skm_phone)
+
+cos_ari_skm <- c(cos_ari_skm_cars, cos_ari_skm_heart, cos_ari_skm_bank, cos_ari_skm_cust, cos_ari_skm_breast, cos_ari_skm_phone)
+cos_ami_skm <- c(cos_ami_skm_cars, cos_ami_skm_heart, cos_ami_skm_bank, cos_ami_skm_cust, cos_ami_skm_breast, cos_ami_skm_phone)
+cos_avg_sil_skm <- c(cos_sil_avg_skm_cars,cos_sil_avg_skm_heart, cos_sil_avg_skm_bank, cos_sil_avg_skm_cust, cos_sil_avg_skm_breast, cos_sil_avg_skm_phone)
+
+HVDM_ari_skm <- c(HVDM_ari_skm_cars, HVDM_ari_skm_heart, HVDM_ari_skm_bank, HVDM_ari_skm_cust, HVDM_ari_skm_breast, HVDM_ari_skm_phone)
+HVDM_ami_skm <- c(HVDM_ami_skm_cars, HVDM_ami_skm_heart, HVDM_ami_skm_bank, HVDM_ami_skm_cust, HVDM_ami_skm_breast, HVDM_ami_skm_phone)
+HVDM_avg_sil_skm <- c(HVDM_sil_avg_skm_cars,HVDM_sil_avg_skm_heart, HVDM_sil_avg_skm_bank, HVDM_sil_avg_skm_cust, HVDM_sil_avg_skm_breast, HVDM_sil_avg_skm_phone)
+
+ahm_ari_skm <- c(ahm_ari_skm_heart, ahm_ari_skm_bank, ahm_ari_skm_cust, ahm_ari_skm_phone)
+ahm_ami_skm <- c(ahm_ami_skm_heart, ahm_ami_skm_bank, ahm_ami_skm_cust, ahm_ami_skm_phone)
+ahm_avg_sil_skm <- c(ahm_sil_avg_skm_heart, ahm_sil_avg_skm_bank, ahm_sil_avg_skm_cust, ahm_sil_avg_skm_phone)
+```
+
+```{r average stats skm}
+dist_names_all <- c('Unbiased Dep', 'Euclidean', 'Gower', 'Cosine', 'HVDM', 'Ahmad & Dey')
+avg_ari_all_skm <- c(mean(ubdep_ari_skm), mean(eucl_ari_skm), mean(gower_ari_skm), mean(cos_ari_skm), mean(HVDM_ari_skm), mean(ahm_ari_skm))
+avg_ami_all_skm <- c(mean(ubdep_ami_skm), mean(eucl_ami_skm), mean(gower_ami_skm), mean(cos_ami_skm), mean(HVDM_ami_skm), mean(ahm_ami_skm))
+avg_sil_all_skm <- c(mean(ubdep_avg_sil_skm), mean(eucl_avg_sil_skm), mean(gower_avg_sil_skm), mean(cos_avg_sil_skm), mean(HVDM_avg_sil_skm), mean(ahm_avg_sil_skm))
+
+std_ari_all_skm <- c(sd(ubdep_ari_skm), sd(eucl_ari_skm), sd(gower_ari_skm), sd(cos_ari_skm), sd(HVDM_ari_skm), sd(ahm_ari_skm))
+std_ami_all_skm <- c(sd(ubdep_ami_skm), sd(eucl_ami_skm), sd(gower_ami_skm), sd(cos_ami_skm), sd(HVDM_ami_skm), sd(ahm_ami_skm))
+std_sil_all_skm <- c(sd(ubdep_avg_sil_skm), sd(eucl_avg_sil_skm), sd(gower_avg_sil_skm), sd(cos_avg_sil_skm), sd(HVDM_avg_sil_skm), sd(ahm_avg_sil_skm))
+
+scores_mean_all_skm <- data.frame(avg_ari_all_skm, avg_ami_all_skm, avg_sil_all_skm, row.names = dist_names_all)
+colnames(scores_mean_all_skm) <- c('ARI', 'AMI', 'Average Silhouette Score')
+kable(scores_mean_all_skm, caption = "Average Statistics on All Datasets with skm")
+
+scores_std_all_skm <- data.frame(std_ari_all_skm, std_ami_all_skm, std_sil_all_skm, row.names = dist_names_all)
+colnames(scores_std_all_skm) <- c('ARI', 'AMI', 'Average Silhouette Score')
+kable(scores_std_all_skm, caption = "Standard Deviation of Statistics on All Datasets with skm")
+```
+
+```{r Error-bar plot: ari pam}
+library(ggplot2)
+
+# Create a data frame
+pam_ari_df <- data.frame(
+  Distance = factor(dist_names_all, levels = dist_names_all),
+  MeanARI = avg_ari_all_pam,
+  SD = std_ari_all_pam
+)
+
+# Create the ggplot
+ggplot(pam_ari_df, aes(x = Distance, y = MeanARI)) +
+  geom_point(size = 3) +
+  geom_errorbar(aes(ymin = MeanARI - SD, ymax = MeanARI + SD), width = 0.2) +
+  labs(
+    title = "Error Bar Plot for ARI Measurements (PAM)",
+    x = "Distance Metric",
+    y = "Mean ARI +/- SD"
+  )
+
+```
+
+```{r Error-bar plot: ami pam}
+# Create a data frame
+pam_ami_df <- data.frame(
+  Distance = factor(dist_names_all, levels = dist_names_all),
+  MeanAMI = avg_ami_all_pam,
+  SD = std_ami_all_pam
+)
+
+# Create the ggplot
+ggplot(pam_ami_df, aes(x = Distance, y = MeanAMI)) +
+  geom_point(size = 3) +
+  geom_errorbar(aes(ymin = MeanAMI - SD, ymax = MeanAMI + SD), width = 0.2) +
+  labs(
+    title = "Error Bar Plot for AMI Measurements (PAM)",
+    x = "Distance Metric",
+    y = "Mean AMI +/- SD"
+  )
+
+```
+
+```{r Error-bar plot: sil pam}
+# Create a data frame
+pam_sil_df <- data.frame(
+  Distance = factor(dist_names_all, levels = dist_names_all),
+  MeanSIL = avg_sil_all_pam,
+  SD = std_sil_all_pam
+)
+
+# Create the ggplot
+ggplot(pam_sil_df, aes(x = Distance, y = MeanSIL)) +
+  geom_point(size = 3) +
+  geom_errorbar(aes(ymin = MeanSIL - SD, ymax = MeanSIL + SD), width = 0.2) +
+  labs(
+    title = "Error Bar Plot for Silhouette Measurements (PAM)",
+    x = "Distance Metric",
+    y = "Mean Silhouette +/- SD"
+  )
+
+```
+
+```{r Error-bar plot: ari skm}
+# Create a data frame
+skm_ari_df <- data.frame(
+  Distance = factor(dist_names_all, levels = dist_names_all),
+  MeanARI = avg_ari_all_skm,
+  SD = std_ari_all_skm
+)
+
+# Create the ggplot
+ggplot(skm_ari_df, aes(x = Distance, y = MeanARI)) +
+  geom_point(size = 3) +
+  geom_errorbar(aes(ymin = MeanARI - SD, ymax = MeanARI + SD), width = 0.2) +
+  labs(
+    title = "Error Bar Plot for ARI Measurements (K-medoids)",
+    x = "Distance Metric",
+    y = "Mean ARI +/- SD"
+  )
+
+```
+
+```{r Error-bar plot: ami skm}
+# Create a data frame
+skm_ami_df <- data.frame(
+  Distance = factor(dist_names_all, levels = dist_names_all),
+  MeanAMI = avg_ami_all_skm,
+  SD = std_ami_all_skm
+)
+
+# Create the ggplot
+ggplot(skm_ami_df, aes(x = Distance, y = MeanAMI)) +
+  geom_point(size = 3) +
+  geom_errorbar(aes(ymin = MeanAMI - SD, ymax = MeanAMI + SD), width = 0.2) +
+  labs(
+    title = "Error Bar Plot for AMI Measurements (K-medoids)",
+    x = "Distance Metric",
+    y = "Mean AMI +/- SD"
+  )
+
+```
+
+```{r Error-bar plot: sil skm}
+# Create a data frame
+skm_sil_df <- data.frame(
+  Distance = factor(dist_names_all, levels = dist_names_all),
+  MeanSIL = avg_sil_all_skm,
+  SD = std_sil_all_skm
+)
+
+# Create the ggplot
+ggplot(skm_sil_df, aes(x = Distance, y = MeanSIL)) +
+  geom_point(size = 3) +
+  geom_errorbar(aes(ymin = MeanSIL - SD, ymax = MeanSIL + SD), width = 0.2) +
+  labs(
+    title = "Error Bar Plot for Silhouette Measurements (K-medoids)",
+    x = "Distance Metric",
+    y = "Mean Silhouette +/- SD"
+  )
+
+```
+
+
+
