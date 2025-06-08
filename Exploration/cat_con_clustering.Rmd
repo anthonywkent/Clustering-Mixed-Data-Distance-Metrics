@@ -26,8 +26,8 @@ library(ggplot2)
 ```
 
 ```{r import functions}
-source('../../Simulation Study/classes.R')
-source('../../Simulation Study/sim_study_funcs.R')
+source('../Simulation Study/classes.R')
+source('../Simulation Study/sim_study_funcs.R')
 ```
 
 ```{r customer segmentation data preprocess, echo=T, results='hide'}

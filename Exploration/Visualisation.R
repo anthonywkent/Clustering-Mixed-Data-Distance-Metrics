@@ -17,8 +17,8 @@ library(tidyverse)
 set.seed(2025)
 
 # functions and classes
-source('classes.R')
-source('sim_study_funcs.R')
+source('../Simulation Study/classes.R')
+source('../Simulation Study/sim_study_funcs.R')
 
 # Import data and clean
 cust_data <- read.csv('../data/customer_segmentation.csv', sep=",")

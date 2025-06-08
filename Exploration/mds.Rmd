@@ -24,8 +24,8 @@ set.seed(2025)
 ```
 
 ```{r files}
-source('../../Simulation Study/classes.R')
-source('../../Simulation Study/sim_study_funcs.R')
+source('../Simulation Study/classes.R')
+source('../Simulation Study/sim_study_funcs.R')
 ```
 
 

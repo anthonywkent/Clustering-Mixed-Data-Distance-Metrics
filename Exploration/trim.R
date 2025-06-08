@@ -1,5 +1,5 @@
-source("classes.R")
-source("sim_study_funcs.R")
+source('../Simulation Study/classes.R')
+source('../Simulation Study/sim_study_funcs.R')
 
 bank_data <- read.csv("data/banking.csv", sep = ";")
 
